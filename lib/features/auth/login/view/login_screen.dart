@@ -8,7 +8,6 @@ import 'package:food_2_go/custom_widgets/custom_text_form_field.dart';
 import '../logic/cubit/login_cubit.dart';
 import '../logic/cubit/login_states.dart';
 
-
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -40,9 +39,9 @@ class _LoginScreenState extends State<LoginScreen> {
             context: context,
             barrierDismissible: false,
             builder: (context) =>
-                 Center(child: CircularProgressIndicator(
-                   color: AppColors.primary,
-                 )),
+                Center(child: CircularProgressIndicator(
+                  color: AppColors.primary,
+                )),
           );
         } else if (state is LoginError) {
           Navigator.pop(context); // Hide loading
@@ -101,6 +100,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         CustomTextFormField(
                           hintText: "Enter Your Email",
                           borderColor: AppColors.subColor,
+                          controller: _emailController, // ربط الـ controller
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your email';
+                            }
+                            return null;
+                          },
                         ),
                         SizedBox(height: 20.h),
                         // Password Field
@@ -116,9 +122,20 @@ class _LoginScreenState extends State<LoginScreen> {
                         CustomTextFormField(
                           hintText: "Enter Your Password",
                           borderColor: AppColors.subColor,
+                          controller: _passwordController, // ربط الـ controller
+                          isPassword: true, // عشان الباسورد يبقى مخفي
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your password';
+                            }
+                            if (value.length < 6) {
+                              return 'Password must be at least 6 characters';
+                            }
+                            return null;
+                          },
                         ),
                         SizedBox(height: 25.h),
-                        // Forgot Password Link
+                        // Login Button
                         CustomElevatedButton(
                           text: "Login",
                           onPressed: () {
@@ -135,8 +152,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             color: AppColors.white,
                           ),
                         ),
-
-                        // Login Button
                       ],
                     ),
                   ),
