@@ -4,8 +4,10 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:food_2_go/core/utils/app_colors.dart';
 import 'package:food_2_go/custom_widgets/custom_elevated_button.dart';
 import 'package:food_2_go/custom_widgets/custom_text_form_field.dart';
-import '../cubit/login_cubit.dart';
-import '../cubit/login_states.dart';
+
+import '../logic/cubit/login_cubit.dart';
+import '../logic/cubit/login_states.dart';
+
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
