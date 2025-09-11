@@ -1,4 +1,4 @@
-import '../../../../../core/errors/failures.dart';
+import '../../../../../controller/errors/failures.dart';
 import '../model/login_model.dart';
 
 

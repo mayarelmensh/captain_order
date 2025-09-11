@@ -1,14 +1,14 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../../../core/api/api_manager.dart';
-import '../../../../../core/errors/failures.dart';
+
+import '../../../../../controller/dio/dio_helper.dart';
+import '../../../../../controller/errors/failures.dart';
 import '../model/login_model.dart';
 import 'login_states.dart';
 
 
 class LoginCubit extends Cubit<LoginState> {
   LoginCubit() : super(LoginInitial());
-  final ApiManager _apiManager = ApiManager();
   bool isPasswordObscure = true;
 
   void togglePasswordVisibility() {
@@ -19,13 +19,18 @@ class LoginCubit extends Cubit<LoginState> {
   Future<void> login(String email, String password) async {
     emit(LoginLoading());
     try {
-      final response = await _apiManager.postData(
-        endPoint: '/parent/sign_in', // Adjust endpoint as needed
-        body: {
-          'email': email,
-          'password': password,
-        },
-      );
+      final response = await DioHelper.postData
+        (data: {
+        'email': email,
+        'password': password,
+      }, url: '/parent/sign_in');
+
+        // endPoint: '/parent/sign_in', // Adjust endpoint as needed
+        // body: {
+        //   'email': email,
+        //   'password': password,
+        // },
+
 
       if (response.statusCode == 200) {
         final loginResponse = LoginResponse.fromJson(response.data);
