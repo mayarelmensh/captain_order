@@ -3,7 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'app_config.dart';
 import 'core/cache/shared_preferences_utils.dart';
 import 'core/utils/app_routes.dart';
-import 'features/auth/login/logic/view/login_screen.dart';
+import 'features/auth/login/view/login_screen.dart';
 
 Future<void> mainCommon(AppConfig config) async {
   WidgetsFlutterBinding.ensureInitialized();

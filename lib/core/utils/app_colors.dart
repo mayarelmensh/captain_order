@@ -17,7 +17,7 @@
     static const black = Color(0xFF000000);
     static const white = Color(0xFFFFFFFF);
     static const grey = Color(0xFF585858);
-    static final lightGrey = Colors.grey[500];
+    static final lightGrey = Color(0xff7C7C7C);
     static const darkGrey = Color(0xFF2C2C2C);
 
     // Shadows & Misc
