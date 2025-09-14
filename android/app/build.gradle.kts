@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("dev.flutter.flutter-gradle-plugin")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -52,5 +53,10 @@ flutter {
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.0")
     implementation("androidx.core:core-ktx:1.13.1")
+    // 👇 Firebase BOM (علشان تمسكي كل الإصدارات متوافقة)
+    implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
+
+    // 👇 Firebase Messaging (لـ FCM)
+    implementation("com.google.firebase:firebase-messaging")
     // أضيفي أي تبعيات إضافية هنا لو محتاجة (زي Firebase أو dio)
 }

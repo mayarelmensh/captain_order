@@ -1,10 +1,11 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:food_2_go/core/utils/app_colors.dart';
+import 'package:food_2_go/core/utils/app_routes.dart';
 import 'package:food_2_go/custom_widgets/custom_elevated_button.dart';
 import 'package:food_2_go/custom_widgets/custom_text_form_field.dart';
-
 import '../logic/cubit/login_cubit.dart';
 import '../logic/cubit/login_states.dart';
 
@@ -29,6 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<LoginCubit, LoginState>(
@@ -45,14 +47,24 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         } else if (state is LoginError) {
           Navigator.pop(context); // Hide loading
+          print(state.failure.errorMsg);
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(SnackBar(content: Text(state.failure.errorMsg)));
+          ).showSnackBar(
+              SnackBar(
+                content: Text(state.failure.errorMsg),
+                backgroundColor: AppColors.red,
+              ));
         } else if (state is LoginSuccess) {
           Navigator.pop(context); // Hide loading
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('Login successful!')));
+          ).showSnackBar(
+              SnackBar(
+              content: Text('Login successful!'),
+              backgroundColor: AppColors.green,
+          ));
+          Navigator.pushReplacementNamed(context, AppRoutes.dineInTablesRoute);
           // Navigate to home or next screen
           // Navigator.pushReplacementNamed(context, AppRoutes.homeScreen);
         }
@@ -100,13 +112,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         CustomTextFormField(
                           hintText: "Enter Your Email",
                           borderColor: AppColors.subColor,
-                          controller: _emailController, // ربط الـ controller
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter your email';
-                            }
-                            return null;
-                          },
+                          controller: _emailController,
                         ),
                         SizedBox(height: 20.h),
                         // Password Field
@@ -120,31 +126,32 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         SizedBox(height: 8.h),
                         CustomTextFormField(
+                          isObscureText: loginCubit.isPasswordObscure,
                           hintText: "Enter Your Password",
                           borderColor: AppColors.subColor,
                           controller: _passwordController, // ربط الـ controller
-                          isPassword: true, // عشان الباسورد يبقى مخفي
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter your password';
-                            }
-                            if (value.length < 6) {
-                              return 'Password must be at least 6 characters';
-                            }
-                            return null;
-                          },
+                          suffixIcon: IconButton(
+                            onPressed: () {
+                              loginCubit.togglePasswordVisibility();
+                            },
+                            icon: Icon(
+                              loginCubit.isPasswordObscure
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              color: AppColors.subColor,
+                              size: 20.sp,
+                            ),
+                          ),
                         ),
                         SizedBox(height: 25.h),
                         // Login Button
                         CustomElevatedButton(
                           text: "Login",
                           onPressed: () {
-                            if (_formKey.currentState!.validate()) {
                               loginCubit.login(
                                 _emailController.text,
                                 _passwordController.text,
                               );
-                            }
                           },
                           backgroundColor: AppColors.primary,
                           textStyle: TextStyle(

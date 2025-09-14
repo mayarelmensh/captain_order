@@ -3,4 +3,7 @@ class AppRoutes {
   static String homeRoute = "/home";
   static String loginRoute = "/login";
   static String onBoardingRoute = "/onboarding";
+  static String dineInTablesRoute = "/dine_in_tables";
+  static String tableInOrder = "/table_in_order";
+
 }

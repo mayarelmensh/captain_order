@@ -10,9 +10,10 @@
     static const backGround = Color(0xFFF9FAFB);
     // Status Colors
     static const green = Color(0xFF15D031);
+    static const lightGreen = Color(0xFF59FEB6);
     static const red = Color(0xFFF44336);
-    static const yellow = Color(0xFFEFA947);
-    static const blue = Color(0xFF2196F3);
+    static const yellow = Color(0xFFFFB020);
+    static const blue = Color(0xff2C7BE5);
     // Text & Grey
     static const black = Color(0xFF000000);
     static const white = Color(0xFFFFFFFF);
@@ -24,6 +25,8 @@
     static const shadowGrey = Color.fromRGBO(245, 245, 245, 0.3);
 
     static const purple = Color(0xFF9C27B0);
+    static const babyPink = Color(0xFFF69678);
+    static const pink = Color(0xFFFE5F59);
     static const purpleLight = Color(0xFFE1BEE7);
   }
 

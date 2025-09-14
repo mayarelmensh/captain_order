@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 class DioHelper {
   static late Dio dio;
 
+
   static void init() {
     dio = Dio(
       BaseOptions(
@@ -15,9 +16,19 @@ class DioHelper {
         },
       ),
     );
+    // dio.interceptors.add(
+    //   LogInterceptor(
+    //     request: true,
+    //     requestBody: true,
+    //     requestHeader: true,
+    //     responseBody: true,
+    //     responseHeader: false,
+    //     error: true,
+    //   ),
+    // );
   }
 
-  
+
 
   static Future<Response> getData({
     required String url,
@@ -40,7 +51,7 @@ class DioHelper {
   }
 
   static Future<Response> postData({
-    required dynamic data,
+     dynamic data,
     required String url,
     Map<String, dynamic>? query,
     String? token,

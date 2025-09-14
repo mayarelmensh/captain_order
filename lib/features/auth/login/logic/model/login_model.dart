@@ -1,55 +1,51 @@
-
 class LoginResponse {
-  final CaptainOrder captainOrder;
-  final String token;
+  final CaptainOrder? captainOrder;
+  final String? token;
 
-  LoginResponse({
-    required this.captainOrder,
-    required this.token,
-  });
+  LoginResponse({this.captainOrder, this.token});
 
   factory LoginResponse.fromJson(Map<String, dynamic> json) {
     return LoginResponse(
-      captainOrder: CaptainOrder.fromJson(json['captain_order']),
-      token: json['token'],
+      captainOrder: json['user'] != null ? CaptainOrder.fromJson(json['user']) : null,
+      token: json['token'] ?? json['user']?['token'],
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'captain_order': captainOrder.toJson(),
+      'user': captainOrder?.toJson(),
       'token': token,
     };
   }
 }
 
 class CaptainOrder {
-  final int id;
-  final int branchId;
-  final String name;
-  final String phone;
-  final String createdAt;
-  final String updatedAt;
-  final String image;
-  final String userName;
-  final int status;
-  final String role;
-  final String token;
-  final String imageLink;
+  final int? id;
+  final int? branchId;
+  final String? name;
+  final String? phone;
+  final String? createdAt;
+  final String? updatedAt;
+  final String? image;
+  final String? userName;
+  final int? status;
+  final String? role;
+  final String? token;
+  final String? imageLink;
 
   CaptainOrder({
-    required this.id,
-    required this.branchId,
-    required this.name,
-    required this.phone,
-    required this.createdAt,
-    required this.updatedAt,
-    required this.image,
-    required this.userName,
-    required this.status,
-    required this.role,
-    required this.token,
-    required this.imageLink,
+    this.id,
+    this.branchId,
+    this.name,
+    this.phone,
+    this.createdAt,
+    this.updatedAt,
+    this.image,
+    this.userName,
+    this.status,
+    this.role,
+    this.token,
+    this.imageLink,
   });
 
   factory CaptainOrder.fromJson(Map<String, dynamic> json) {

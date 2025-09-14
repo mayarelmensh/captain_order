@@ -14,3 +14,4 @@ class LoginError extends LoginState {
   final Failures failure;
   LoginError(this.failure);
 }
+class ChangePasswordVisibilityState extends LoginState{}

@@ -18,6 +18,7 @@ class CustomTextFormField extends StatefulWidget {
   TextStyle? textStyle;
   bool readonly;
   final Function(String)? onChanged;
+  double? radius;
 
   CustomTextFormField({
     super.key,
@@ -37,6 +38,7 @@ class CustomTextFormField extends StatefulWidget {
     this.borderColor = AppColors.white,
     this.readonly = false,
     this.onChanged,
+    this.radius
   });
 
   @override
@@ -70,25 +72,25 @@ class _CustomTextFormFieldState extends State<CustomTextFormField> {
                 },
                 icon: Icon(
                   widget.isObscureText
-                      ? Icons.visibility_off
-                      : Icons.visibility,
+                      ?  Icons.visibility
+                      : Icons.visibility_off
                 ),
               )
             : widget.suffixIcon,
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(widget.radius??16),
           borderSide: BorderSide(color: widget.borderColor, width: 1),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(widget.radius??16),
           borderSide: BorderSide(color: widget.borderColor, width: 1),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(widget.radius??16),
           borderSide: const BorderSide(color: AppColors.darkGrey),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(widget.radius??16),
           borderSide: const BorderSide(color: AppColors.darkGrey),
         ),
       ),
