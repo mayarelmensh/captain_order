@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "332813905012",
+    "project_id": "captain-order",
+    "storage_bucket": "captain-order.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:332813905012:android:9dfb994e5da29bf932b521",
+        "android_client_info": {
+          "package_name": "com.captainorder.dev"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDgTSaJ9lMKEYCZaIV2R4rl9ZJpg6xFeE4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:332813905012:android:35aea9a21d46019a32b521",
+        "android_client_info": {
+          "package_name": "com.example.food_2_go"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDgTSaJ9lMKEYCZaIV2R4rl9ZJpg6xFeE4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

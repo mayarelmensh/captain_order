@@ -5,5 +5,7 @@ class AppRoutes {
   static String onBoardingRoute = "/onboarding";
   static String dineInTablesRoute = "/dine_in_tables";
   static String tableInOrder = "/table_in_order";
+  static String confirmOrder = "/confirmOrder";
+  static String selectService = "/select_service";
 
 }

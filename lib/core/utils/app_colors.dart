@@ -13,6 +13,8 @@
     static const lightGreen = Color(0xFF59FEB6);
     static const red = Color(0xFFF44336);
     static const yellow = Color(0xFFFFB020);
+    static const darkYellow = Color(0xFFFEBB04);
+
     static const blue = Color(0xff2C7BE5);
     // Text & Grey
     static const black = Color(0xFF000000);

@@ -2,6 +2,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:food_2_go/core/utils/app_colors.dart';
+import 'package:food_2_go/features/pages/confirm_order/view/confirm_order_screen.dart';
+import 'package:food_2_go/features/pages/dine_in_tables_screen/view/select_service.dart';
 import 'package:food_2_go/features/pages/table_in_order/view/table_in_order.dart';
 import 'app_config.dart';
 import 'controller/cache/shared_preferences_utils.dart';
@@ -48,6 +50,8 @@ class MyApp extends StatelessWidget {
           AppRoutes.loginRoute: (context) => const LoginScreen(),
           AppRoutes.dineInTablesRoute: (context) =>  DineInTablesScreen(),
           AppRoutes.tableInOrder: (context) =>  TableInOrder(),
+          AppRoutes.confirmOrder: (context) =>  ConfirmOrderScreen(),
+          AppRoutes.selectService: (context) =>  SelectServiceScreen(),
           // AppRoutes.homeRoute: (context) => const HomeScreen(),
         },
       ),

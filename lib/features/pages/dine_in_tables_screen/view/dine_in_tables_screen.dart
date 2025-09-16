@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:food_2_go/core/utils/app_colors.dart';
 import 'package:food_2_go/core/utils/app_routes.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../logic/model/dine_in_tables_model.dart';
 
-// Extension to capitalize strings
 extension StringExtension on String {
   String capitalize() {
     if (isEmpty) return this;
@@ -197,7 +197,6 @@ class _DineInTablesScreenState extends State<DineInTablesScreen> {
   @override
   Widget build(BuildContext context) {
     final filteredTables = getFilteredTables();
-
     return Scaffold(
       body: Padding(
         padding: EdgeInsets.symmetric(horizontal: 15.r, vertical: 45.h),
@@ -206,19 +205,19 @@ class _DineInTablesScreenState extends State<DineInTablesScreen> {
           children: [
             Text(
               'Dine-in Tables',
-              style: TextStyle(
+              style: GoogleFonts.poppins(
                 color: AppColors.black,
-                fontSize: 28.h,
+                fontSize: 28.sp,
                 fontWeight: FontWeight.w700,
               ),
             ),
             SizedBox(height: 2.h),
             Text(
               'Select an available table to start an order',
-              style: TextStyle(
+              style: GoogleFonts.poppins(
                 color: AppColors.subColor,
                 fontWeight: FontWeight.w400,
-                fontSize: 12.h,
+                fontSize: 12.sp,
               ),
             ),
             SizedBox(height: 12.h),
@@ -251,7 +250,7 @@ class _DineInTablesScreenState extends State<DineInTablesScreen> {
                       child: Center(
                         child: Text(
                           tabs[index],
-                          style: TextStyle(
+                          style: GoogleFonts.poppins(
                             color: isSelected
                                 ? AppColors.white
                                 : AppColors.subColor,
@@ -282,7 +281,7 @@ class _DineInTablesScreenState extends State<DineInTablesScreen> {
                   final statusColor = getStatusColor(table.currentStatus);
                   return GestureDetector(
                     onTap: (){
-                      Navigator.pushNamed(context, AppRoutes.tableInOrder,arguments: [
+                      Navigator.pushNamed(context, AppRoutes.selectService,arguments: [
 
                       ]);
                     },
@@ -308,7 +307,7 @@ class _DineInTablesScreenState extends State<DineInTablesScreen> {
                                 Center(
                                   child: Text(
                                     table.tableNumber,
-                                    style: TextStyle(
+                                    style: GoogleFonts.poppins(
                                       fontSize: 30.sp,
                                       fontWeight: FontWeight.bold,
                                       color: AppColors.black,
@@ -318,7 +317,7 @@ class _DineInTablesScreenState extends State<DineInTablesScreen> {
                                 SizedBox(width: 8.w),
                                 Text(
                                   table.currentStatus.capitalize(),
-                                  style: TextStyle(
+                                  style: GoogleFonts.inter(
                                     fontSize: 14.sp,
                                     color: AppColors.black,
                                   ),
@@ -328,21 +327,29 @@ class _DineInTablesScreenState extends State<DineInTablesScreen> {
                             SizedBox(height: 4.h),
                             Column(
                              crossAxisAlignment: CrossAxisAlignment.start,                            children: [
-                              Text(
-                                '${table.capacity} seats',
-                                style: TextStyle(
-                                  fontSize: 12.sp,
-                                  color:AppColors.darkGrey,
-                                ),
-                              ),
-                                SizedBox(height: 4.h),
+                              Row(children: [
+                                Image.asset('assets/images/seats.png'),
+                                SizedBox(width: 8.w,),
                                 Text(
-                                  'table ${table.id} ',
-                                  style: TextStyle(
+                                  '${table.capacity} seats',
+                                  style: GoogleFonts.inter(
                                     fontSize: 12.sp,
-                                    color: AppColors.darkGrey,
+                                    color:AppColors.darkGrey,
                                   ),
                                 ),
+                              ],),
+                                SizedBox(height: 4.h),
+                                Row(children: [
+                                  Image.asset("assets/images/table_icon.png"),
+                                  SizedBox(width: 8.w,),
+                                  Text(
+                                    'table ${table.id} ',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12.sp,
+                                      color: AppColors.darkGrey,
+                                    ),
+                                  ),
+                                ],)
                               ],
                             )
                           ],

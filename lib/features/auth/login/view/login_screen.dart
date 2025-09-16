@@ -6,6 +6,7 @@ import 'package:food_2_go/core/utils/app_colors.dart';
 import 'package:food_2_go/core/utils/app_routes.dart';
 import 'package:food_2_go/custom_widgets/custom_elevated_button.dart';
 import 'package:food_2_go/custom_widgets/custom_text_form_field.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../logic/cubit/login_cubit.dart';
 import '../logic/cubit/login_states.dart';
 
@@ -61,6 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
             context,
           ).showSnackBar(
               SnackBar(
+                duration: Duration(seconds: 1),
               content: Text('Login successful!'),
               backgroundColor: AppColors.green,
           ));
@@ -82,11 +84,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     SizedBox(height: 8.h),
                     Text(
                       'Login',
-                      style: TextStyle(
+                      style:GoogleFonts.poppins(
                         fontSize: 24.sp,
                         fontWeight: FontWeight.w700,
                         color: Colors.black,
-                      ),
+                      )
                     ),
                   ],
                 ),
@@ -102,15 +104,18 @@ class _LoginScreenState extends State<LoginScreen> {
                         // Email Field
                         Text(
                           'Email/User name',
-                          style: TextStyle(
-                            fontSize: 18.sp,
+                          style: GoogleFonts.poppins(
+                            fontSize: 13.sp,
                             fontWeight: FontWeight.w500,
-                            color: Colors.black,
-                          ),
+                            color: Colors.black,)
                         ),
                         SizedBox(height: 8.h),
                         CustomTextFormField(
                           hintText: "Enter Your Email",
+                          hintStyle:  GoogleFonts.poppins(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.subColor,),
                           borderColor: AppColors.subColor,
                           controller: _emailController,
                         ),
@@ -118,16 +123,19 @@ class _LoginScreenState extends State<LoginScreen> {
                         // Password Field
                         Text(
                           'Password',
-                          style: TextStyle(
-                            fontSize: 18.sp,
+                          style:  GoogleFonts.poppins(
+                            fontSize: 13.sp,
                             fontWeight: FontWeight.w500,
-                            color: Colors.black,
-                          ),
+                            color: Colors.black,),
                         ),
                         SizedBox(height: 8.h),
                         CustomTextFormField(
                           isObscureText: loginCubit.isPasswordObscure,
                           hintText: "Enter Your Password",
+                          hintStyle: GoogleFonts.poppins(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.subColor,),
                           borderColor: AppColors.subColor,
                           controller: _passwordController, // ربط الـ controller
                           suffixIcon: IconButton(
@@ -154,10 +162,11 @@ class _LoginScreenState extends State<LoginScreen> {
                               );
                           },
                           backgroundColor: AppColors.primary,
-                          textStyle: TextStyle(
-                            fontSize: 18,
+                          textStyle: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14.sp,
                             color: AppColors.white,
-                          ),
+                          )
                         ),
                       ],
                     ),
