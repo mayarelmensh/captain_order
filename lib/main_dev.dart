@@ -5,7 +5,7 @@ void main() {
   final config = AppConfig(
     appName: "Food2Go Dev",
     flavor: "development",
-    baseUrl: "https://dev.api.food2go.com", // غيريها حسب API بتاعك
+    baseUrl: "https://bcknd.food2go.online",
   );
   mainCommon(config);
 }

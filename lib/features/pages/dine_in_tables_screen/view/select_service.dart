@@ -17,7 +17,9 @@ class SelectServiceScreen extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                IconButton(onPressed: (){},
+                IconButton(onPressed: (){
+                  Navigator.pop(context);
+                },
                     icon: CircleAvatar(
                         backgroundColor: AppColors.darkYellow,
                         child: Icon(Icons.arrow_back))),
@@ -41,7 +43,8 @@ class SelectServiceScreen extends StatelessWidget {
               fontSize: 20.sp,
               fontWeight: FontWeight.w700,
               color: AppColors.black
-            ),),
+            ),
+            ),
             SizedBox(height: 24.h,),
             GestureDetector(
                 onTap: (){

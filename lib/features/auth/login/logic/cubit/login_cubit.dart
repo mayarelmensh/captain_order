@@ -34,6 +34,10 @@ class LoginCubit extends Cubit<LoginState> {
       if (response.statusCode == 200 && response.data['user'] != null) {
         // Parse safely
         final loginResponse = LoginResponse.fromJson(response.data);
+        print("✅ Role from API: ${loginResponse.role}");
+        print("✅ Role from User: ${loginResponse.captainOrder?.role}");
+        print("✅ Final Role Used: ${loginResponse.role ?? loginResponse.captainOrder?.role}");
+
         emit(LoginSuccess(loginResponse));
       } else {
         emit(LoginError(ServerError(

@@ -10,6 +10,7 @@ import 'controller/cache/shared_preferences_utils.dart';
 import 'controller/dio/dio_helper.dart';
 import 'core/utils/app_routes.dart';
 import 'features/auth/login/view/login_screen.dart';
+import 'features/auth/login/view/role_screen.dart';
 import 'features/first_screen/on_boadrding/on_boarding_screen.dart';
 import 'features/pages/dine_in_tables_screen/view/dine_in_tables_screen.dart';
 import 'features/pages/splash_screen/splash_screen.dart';
@@ -52,6 +53,7 @@ class MyApp extends StatelessWidget {
           AppRoutes.tableInOrder: (context) =>  TableInOrder(),
           AppRoutes.confirmOrder: (context) =>  ConfirmOrderScreen(),
           AppRoutes.selectService: (context) =>  SelectServiceScreen(),
+          AppRoutes.roleScreen: (context) =>  RoleScreen(),
           // AppRoutes.homeRoute: (context) => const HomeScreen(),
         },
       ),

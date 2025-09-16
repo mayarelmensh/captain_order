@@ -7,5 +7,6 @@ class AppRoutes {
   static String tableInOrder = "/table_in_order";
   static String confirmOrder = "/confirmOrder";
   static String selectService = "/select_service";
+  static String roleScreen = "/role_screen";
 
 }

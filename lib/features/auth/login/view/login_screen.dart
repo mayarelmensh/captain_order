@@ -6,6 +6,7 @@ import 'package:food_2_go/core/utils/app_colors.dart';
 import 'package:food_2_go/core/utils/app_routes.dart';
 import 'package:food_2_go/custom_widgets/custom_elevated_button.dart';
 import 'package:food_2_go/custom_widgets/custom_text_form_field.dart';
+import 'package:food_2_go/features/auth/login/view/role_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../logic/cubit/login_cubit.dart';
 import '../logic/cubit/login_states.dart';
@@ -66,7 +67,12 @@ class _LoginScreenState extends State<LoginScreen> {
               content: Text('Login successful!'),
               backgroundColor: AppColors.green,
           ));
-          Navigator.pushReplacementNamed(context, AppRoutes.dineInTablesRoute);
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => RoleScreen(loginResponse: state.loginResponse), // ✅ مرريه هنا
+            ),
+          );
           // Navigate to home or next screen
           // Navigator.pushReplacementNamed(context, AppRoutes.homeScreen);
         }

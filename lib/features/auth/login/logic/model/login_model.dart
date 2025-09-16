@@ -1,13 +1,22 @@
 class LoginResponse {
   final CaptainOrder? captainOrder;
   final String? token;
+  final String? role;
 
-  LoginResponse({this.captainOrder, this.token});
+  LoginResponse({this.captainOrder, this.token, this.role});
 
   factory LoginResponse.fromJson(Map<String, dynamic> json) {
+    final roleRoot = json['role'];
+    final roleUser = json['user']?['role'];
+    final finalRole = roleRoot ?? roleUser;
+
+
     return LoginResponse(
-      captainOrder: json['user'] != null ? CaptainOrder.fromJson(json['user']) : null,
-      token: json['token'] ?? json['user']?['token'],
+      captainOrder: json['user'] != null
+          ? CaptainOrder.fromJson(json['user'])
+          : null,
+      token: json['token'],
+      role: finalRole,
     );
   }
 
@@ -15,6 +24,7 @@ class LoginResponse {
     return {
       'user': captainOrder?.toJson(),
       'token': token,
+      'role': role,
     };
   }
 }
