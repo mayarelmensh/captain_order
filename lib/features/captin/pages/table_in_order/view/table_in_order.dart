@@ -14,6 +14,7 @@ class TableInOrder extends StatefulWidget {
 }
 
 class _TableInOrderState extends State<TableInOrder> {
+
   final List<Map<String, String>> fakeData = List.generate(
     6,
     (index) => {
@@ -117,6 +118,7 @@ class _TableInOrderState extends State<TableInOrder> {
 
     return filtered;
   }
+
 
   @override
   Widget build(BuildContext context) {

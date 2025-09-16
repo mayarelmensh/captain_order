@@ -1,8 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:food_2_go/features/pages/confirm_order/view/confirm_order_screen.dart';
 import '../../../../core/utils/app_colors.dart';
-import '../../../pages/dine_in_tables_screen/view/dine_in_tables_screen.dart';
+import '../../../captin/pages/confirm_order/view/confirm_order_screen.dart';
+import '../../../captin/pages/dine_in_tables_screen/view/dine_in_tables_screen.dart';
 import '../logic/model/login_model.dart';
 
 class RoleScreen extends StatelessWidget {

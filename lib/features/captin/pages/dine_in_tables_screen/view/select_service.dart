@@ -9,48 +9,84 @@ class SelectServiceScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+
+    final tableNumber = args?['tableNumber'] ?? '';
+    final area = args?['area'] ?? '';
+    final tableId = args?['tableId'] ?? 0;
+
     return Scaffold(
       body: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 10.w,vertical: 100.h),
+        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 100.h),
         child: Column(
           children: [
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                IconButton(onPressed: (){
-                  Navigator.pop(context);
-                },
-                    icon: CircleAvatar(
-                        backgroundColor: AppColors.darkYellow,
-                        child: Icon(Icons.arrow_back))),
-                Text("Choose The Service\n below",
-
+                IconButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  icon: CircleAvatar(
+                    backgroundColor: AppColors.darkYellow,
+                    child: Icon(Icons.arrow_back),
+                  ),
+                ),
+                Text(
+                  "Choose The Service\n below",
                   style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 28.sp,
-                  color: AppColors.black
-                ),),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 28.sp,
+                    color: AppColors.black,
+                  ),
+                ),
               ],
             ),
-            SizedBox(height: 70.h,),
-            GestureDetector(
-                onTap: (){
-                  Navigator.pushNamed(context, AppRoutes.tableInOrder);
-                },
-                child: Image.asset('assets/images/take_order.png')),
-            SizedBox(height: 24.h,),
-            Text("Or",style: GoogleFonts.poppins(
-              fontSize: 20.sp,
-              fontWeight: FontWeight.w700,
-              color: AppColors.black
+            SizedBox(height: 20.h),
+            Text(
+              'Table: $tableNumber',
+              style: GoogleFonts.poppins(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.w600,
+              ),
             ),
+            Text(
+              'Area: $area',
+              style: GoogleFonts.poppins(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w400,
+                color: AppColors.subColor,
+              ),
             ),
-            SizedBox(height: 24.h,),
+            SizedBox(height: 70.h),
             GestureDetector(
-                onTap: (){
-
-                },
-                child: Image.asset('assets/images/request_payment.png')),
+              onTap: () {
+                Navigator.pushNamed(
+                  context,
+                  AppRoutes.tableInOrder,
+                  arguments: {
+                    'tableNumber': tableNumber,
+                    'area': area,
+                    'tableId': tableId,
+                  },
+                );
+              },
+              child: Image.asset('assets/images/take_order.png'),
+            ),
+            SizedBox(height: 24.h),
+            Text(
+              "Or",
+              style: GoogleFonts.poppins(
+                fontSize: 20.sp,
+                fontWeight: FontWeight.w700,
+                color: AppColors.black,
+              ),
+            ),
+            SizedBox(height: 24.h),
+            GestureDetector(
+              onTap: () {},
+              child: Image.asset('assets/images/request_payment.png'),
+            ),
           ],
         ),
       ),

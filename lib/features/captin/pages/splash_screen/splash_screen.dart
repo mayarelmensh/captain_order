@@ -26,9 +26,10 @@ class _SplashScreenState extends State<SplashScreen> {
     bool? isFirstTime = SharedPreferenceUtils.getData(key: 'isFirstTime') as bool?;
     String? token = SharedPreferenceUtils.getData(key: 'token') as String?;
 
-    if (isFirstTime == false && token != null) {
-      Navigator.pushReplacementNamed(context, AppRoutes.homeRoute);
-    } else if (isFirstTime == false) {
+    // if (isFirstTime == false && token != null) {
+    //   Navigator.pushReplacementNamed(context, AppRoutes.homeRoute);
+    // } else
+      if (isFirstTime == false) {
       Navigator.pushReplacementNamed(context, AppRoutes.loginRoute);
     } else {
       Navigator.pushReplacementNamed(context, AppRoutes.onBoardingRoute);

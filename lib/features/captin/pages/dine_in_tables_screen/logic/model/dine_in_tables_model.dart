@@ -28,13 +28,13 @@ class TableModel {
   final int locationId;
   final int? branchId;
   final int capacity;
-  final String? qrCode;
+  final String? qrCode;  // nullable
   final int status;
-  final String? createdAt;
+  final String? createdAt;  // nullable
   final String updatedAt;
   final String currentStatus;
   final int occupied;
-  final String? qrCodeLink;
+  final String? qrCodeLink;  // nullable
 
   TableModel({
     required this.id,
@@ -58,9 +58,9 @@ class TableModel {
       locationId: json['location_id'] as int,
       branchId: json['branch_id'] as int?,
       capacity: json['capacity'] as int,
-      qrCode: json['qr_code'] as String?,
+      qrCode: json['qr_code'] as String?,  // safe for null
       status: json['status'] as int,
-      createdAt: json['created_at'] as String?,
+      createdAt: json['created_at'] as String?,  // safe for null
       updatedAt: json['updated_at'] as String,
       currentStatus: json['current_status'] as String,
       occupied: json['occupied'] as int,
@@ -89,10 +89,10 @@ class TableModel {
 class CafeLocationModel {
   final int id;
   final String name;
-  final String? createdAt;
+  final String? createdAt;  // nullable
   final String updatedAt;
   final int branchId;
-  final List<LocationModel>? location;
+  final List<LocationModel>? location;  // nullable list
   final List<TableModel> tables;
 
   CafeLocationModel({
@@ -109,7 +109,7 @@ class CafeLocationModel {
     return CafeLocationModel(
       id: json['id'] as int,
       name: json['name'] as String,
-      createdAt: json['created_at'] as String?,
+      createdAt: json['created_at'] as String?,  // safe for null
       updatedAt: json['updated_at'] as String,
       branchId: json['branch_id'] as int,
       location: json['location'] != null
@@ -175,10 +175,10 @@ class FinancialAccountModel {
 class PaymentMethodModel {
   final int id;
   final String name;
-  final String? description;
+  final String? description;  // nullable
   final String logo;
   final int status;
-  final String? createdAt;
+  final String? createdAt;  // nullable
   final String updatedAt;
   final String type;
   final int order;
@@ -201,10 +201,10 @@ class PaymentMethodModel {
     return PaymentMethodModel(
       id: json['id'] as int,
       name: json['name'] as String,
-      description: json['description'] as String?,
+      description: json['description'] as String?,  // safe for null
       logo: json['logo'] as String,
       status: json['status'] as int,
-      createdAt: json['created_at'] as String?,
+      createdAt: json['created_at'] as String?,  // safe for null
       updatedAt: json['updated_at'] as String,
       type: json['type'] as String,
       order: json['order'] as int,
