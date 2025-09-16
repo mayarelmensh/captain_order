@@ -2,17 +2,16 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:food_2_go/core/utils/app_colors.dart';
-import 'package:food_2_go/features/pages/confirm_order/view/confirm_order_screen.dart';
-import 'package:food_2_go/features/pages/dine_in_tables_screen/view/select_service.dart';
-import 'package:food_2_go/features/pages/table_in_order/view/table_in_order.dart';
 import 'app_config.dart';
 import 'controller/cache/shared_preferences_utils.dart';
 import 'controller/dio/dio_helper.dart';
 import 'core/utils/app_routes.dart';
 import 'features/auth/login/view/login_screen.dart';
-import 'features/first_screen/on_boadrding/on_boarding_screen.dart';
-import 'features/pages/dine_in_tables_screen/view/dine_in_tables_screen.dart';
-import 'features/pages/splash_screen/splash_screen.dart';
+import 'features/captin/pages/confirm_order/view/confirm_order_screen.dart';
+import 'features/captin/pages/dine_in_tables_screen/view/dine_in_tables_screen.dart';
+import 'features/captin/pages/dine_in_tables_screen/view/select_service.dart';
+import 'features/captin/pages/splash_screen/splash_screen.dart';
+import 'features/captin/pages/table_in_order/view/table_in_order.dart';
 
 Future<void> mainCommon(AppConfig config) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,7 +45,7 @@ class MyApp extends StatelessWidget {
         initialRoute: AppRoutes.splashRoute,
         routes: {
           AppRoutes.splashRoute: (context) => const SplashScreen(),
-          AppRoutes.onBoardingRoute: (context) => const OnBoardingScreen(),
+          // AppRoutes.onBoardingRoute: (context) => const OnBoardingScreen(),
           AppRoutes.loginRoute: (context) => const LoginScreen(),
           AppRoutes.dineInTablesRoute: (context) =>  DineInTablesScreen(),
           AppRoutes.tableInOrder: (context) =>  TableInOrder(),

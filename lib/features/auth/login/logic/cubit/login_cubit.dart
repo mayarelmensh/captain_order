@@ -47,31 +47,4 @@ class LoginCubit extends Cubit<LoginState> {
   }
 
 
-  //
-  // void _handleErrorResponse(Response response) {
-  //   String errorMsg = 'An error occurred';
-  //   switch (response.statusCode) {
-  //     case 400:
-  //       emit(LoginError(ValidationFailure(errorMsg: 'Invalid email or password')));
-  //       break;
-  //     case 401:
-  //       emit(LoginError(UnauthorizedFailure(errorMsg: 'Unauthorized access')));
-  //       break;
-  //     case 404:
-  //       emit(LoginError(NotFoundFailure(errorMsg: 'Endpoint not found')));
-  //       break;
-  //     case 500:
-  //     default:
-  //       emit(LoginError(ServerError(errorMsg: 'Server error: ${response.statusMessage ?? errorMsg}')));
-  //       break;
-  //   }
-  // }
-  //
-  // void _handleException(dynamic e) {
-  //   if (e.toString().contains('SocketException') || e.toString().contains('Timeout')) {
-  //     emit(LoginError(NetworkError(errorMsg: 'Please check your internet connection')));
-  //   } else {
-  //     emit(LoginError(ServerError(errorMsg: 'Something went wrong, please try again')));
-  //   }
-  // }
 }
