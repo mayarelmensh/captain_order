@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:dio/dio.dart';
 
 class DioHelper {
@@ -42,7 +44,7 @@ class DioHelper {
     };
 
     final uri = Uri.parse(dio.options.baseUrl + url).replace(queryParameters: query);
-    print('🔗 Full Request URL: $uri');
+    log('🔗 Full Request URL: $uri');
 
     return await dio.get(
       url,
@@ -62,7 +64,7 @@ class DioHelper {
     };
 
     final uri = Uri.parse(dio.options.baseUrl + url).replace(queryParameters: query);
-    print('🔗 Full Request URL: $uri');
+    log('🔗 Full Request URL: $uri');
 
     return await dio.post(
       url,
@@ -104,7 +106,7 @@ class DioHelper {
     };
 
     final uri = Uri.parse(dio.options.baseUrl + url).replace(queryParameters: query);
-    print('🔗 Full Request URL: $uri');
+    log('🔗 Full Request URL: $uri');
 
     return await dio.patch(
       url,
@@ -124,7 +126,7 @@ class DioHelper {
     };
 
     final uri = Uri.parse(dio.options.baseUrl + url).replace(queryParameters: query);
-    print('🔗 Full Request URL: $uri');
+    log('🔗 Full Request URL: $uri');
 
     return await dio.delete(
       url,
@@ -133,8 +135,8 @@ class DioHelper {
   }
 
   static void printResponse(Response response) {
-    print('📊 Response Status: ${response.statusCode}');
-    print('📊 Response Data: ${response.data}');
-    print('📊 Response Headers: ${response.headers}');
+    log('📊 Response Status: ${response.statusCode}');
+    log('📊 Response Data: ${response.data}');
+    log('📊 Response Headers: ${response.headers}');
   }
 }
