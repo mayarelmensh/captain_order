@@ -3,11 +3,11 @@ class EndPoints{
  static const String Login = '/parent/sign_in';
 
  /// Orders endpoints
- static const String orders = '/waiter/orders';
- static const String orderStatus = '/waiter/orders/status'; // للـ pickup
+ static const String ordersList = '/waiter/orders';
+ static String orderStatus(int orderId) => '/waiter/orders/status/$orderId';
+ static String orderItem(int orderId) => '/waiter/orders/order/$orderId';
+ static const String baseUrl = 'https://bcknd.food2go.online';
 
- /// Helper methods
- static String getOrderStatusUrl(int orderId) => '$orderStatus/$orderId';
- static String getOrderUrl(int orderId) => '$orders/$orderId';
+
 
 }
