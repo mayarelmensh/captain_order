@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:food_2_go/core/utils/app_colors.dart';
 import 'package:food_2_go/features/auth/login/logic/cubit/login_cubit.dart';
+import 'package:food_2_go/features/captin/pages/table_in_order/logic/cubit/dine_in_order_cubit.dart';
 import 'app_config.dart';
 import 'controller/cache/shared_preferences_utils.dart';
 import 'controller/dio/dio_helper.dart';
@@ -42,7 +43,10 @@ class MyApp extends StatelessWidget {
       child: MultiBlocProvider(
         providers: [
          BlocProvider(create:(context) => DineInTablesCubit()..loadCafeData(),),
-         BlocProvider(create:(context) => LoginCubit())
+         BlocProvider(create:(context) => LoginCubit()),
+         BlocProvider(create:(context) => ProductListCubit()..getProductLists()),
+         BlocProvider( create: (context) => OrderCubit(),)
+
         ],
         child: MaterialApp(
           theme: ThemeData(
@@ -60,29 +64,6 @@ class MyApp extends StatelessWidget {
             AppRoutes.tableInOrder: (context) =>  TableInOrder(),
             AppRoutes.confirmOrder: (context) =>  ConfirmOrderScreen(),
             AppRoutes.selectService: (context) =>  SelectServiceScreen(),
-          },
-        ),
-      child: MultiBlocProvider(
-        providers: [
-          BlocProvider(
-            create: (context) => OrderCubit(),
-          ),
-
-        ],
-        child: MaterialApp(
-          theme: ThemeData(
-            scaffoldBackgroundColor: AppColors.backGround,
-          ),
-          debugShowCheckedModeBanner: false,
-          title: config.appName,
-          initialRoute: AppRoutes.splashRoute,
-          routes: {
-            AppRoutes.splashRoute: (context) => const SplashScreen(),
-            AppRoutes.loginRoute: (context) => const LoginScreen(),
-            AppRoutes.dineInTablesRoute: (context) => DineInTablesScreen(),
-            AppRoutes.tableInOrder: (context) => TableInOrder(),
-            AppRoutes.confirmOrder: (context) => ConfirmOrderScreen(),
-            AppRoutes.selectService: (context) => SelectServiceScreen(),
           },
         ),
       ),

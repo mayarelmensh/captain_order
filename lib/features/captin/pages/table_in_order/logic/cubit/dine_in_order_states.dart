@@ -7,7 +7,7 @@ class ProductListInitial extends ProductListState {}
 class ProductListLoading extends ProductListState {}
 
 class ProductListLoaded extends ProductListState {
-  final Product productResponse;
+  final ProductListResponseModel productResponse;
   final int selectedCategoryIndex;
   final List<Product> filteredProducts;
 
@@ -18,7 +18,7 @@ class ProductListLoaded extends ProductListState {
   });
 
   ProductListLoaded copyWith({
-    Product? productResponse,
+    ProductListResponseModel? productResponse,
     int? selectedCategoryIndex,
     List<Product>? filteredProducts,
   }) {

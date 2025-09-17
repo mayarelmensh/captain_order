@@ -16,7 +16,7 @@ class DineInTablesCubit extends Cubit<DineInTablesState> {
       await SharedPreferenceUtils.init();
       final token = SharedPreferenceUtils.getData(key: 'token') as String;
       final response = await DioHelper.getData(
-        url: '/captain/selection_lists',
+        url: '/captain/my_selection_lists',
         token: token,
       );
 

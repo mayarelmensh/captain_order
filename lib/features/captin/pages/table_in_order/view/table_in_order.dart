@@ -3,12 +3,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:food_2_go/core/utils/app_colors.dart';
 import 'package:food_2_go/core/utils/app_routes.dart';
+import 'package:food_2_go/core/utils/flutter_toast.dart';
 import 'package:food_2_go/custom_widgets/custom_elevated_button.dart';
-import 'package:food_2_go/custom_widgets/custom_text_form_field.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'dart:async';
 import '../../../../auth/login/logic/cubit/login_cubit.dart';
 import '../../../../auth/login/logic/cubit/login_states.dart';
 import '../logic/cubit/dine_in_order_cubit.dart';
+import '../logic/cubit/dine_in_order_states.dart';
 import '../logic/model/dine_in_order_model.dart';
 
 class TableInOrder extends StatefulWidget {
@@ -28,6 +30,7 @@ class _TableInOrderState extends State<TableInOrder> {
   double totalAmount = 0.0;
 
   TextEditingController searchController = TextEditingController();
+  Timer? _debounce;
 
   @override
   void didChangeDependencies() {
@@ -46,6 +49,7 @@ class _TableInOrderState extends State<TableInOrder> {
   @override
   void dispose() {
     searchController.dispose();
+    _debounce?.cancel();
     super.dispose();
   }
 
@@ -57,10 +61,19 @@ class _TableInOrderState extends State<TableInOrder> {
     }
   }
 
+  // Debounce search input
+  void _onSearchChanged(String query, BuildContext context) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      print("🔍 UI Search query sent: '$query'");
+      context.read<ProductListCubit>().searchProducts(query);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => ProductListCubit(),
+      create: (context) => ProductListCubit()..getProductLists(),
       child: Scaffold(
         body: SafeArea(
           child: Padding(
@@ -190,28 +203,39 @@ class _TableInOrderState extends State<TableInOrder> {
                   ),
                 ),
                 SizedBox(height: 10.h),
-                CustomTextFormField(
-                  controller: searchController,
-                  radius: 40.r,
-                  hintText: "Search for food or drink",
-                  hintStyle: GoogleFonts.poppins(
-                    fontSize: 14.sp,
-                    color: AppColors.subColor,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  prefixIcon: Icon(Icons.search, color: AppColors.subColor),
-                  filledColor: AppColors.borderColor,
-                  onChanged: (value) {
-                    context.read<ProductListCubit>().searchProducts(value);
+                Builder(
+                  builder: (context) {
+                    return TextFormField(
+                      controller: searchController,
+                      decoration: InputDecoration(
+                        hintText: "Search for food or drink",
+                        hintStyle: GoogleFonts.poppins(
+                          fontSize: 14.sp,
+                          color: AppColors.subColor,
+                          fontWeight: FontWeight.w400,
+                        ),
+                        prefixIcon: Icon(Icons.search, color: AppColors.subColor),
+                        filled: true,
+                        fillColor: AppColors.borderColor,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(40.r),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                      onChanged: (query) => _onSearchChanged(query, context),
+                    );
                   },
                 ),
                 SizedBox(height: 15.h),
 
                 // Categories Tabs - Dynamic from API
                 BlocBuilder<ProductListCubit, ProductListState>(
+                  buildWhen: (previous, current) => previous != current,
                   builder: (context, state) {
+                    print("📋 Building category tabs, state: ${state.runtimeType}");
                     if (state is ProductListLoaded) {
                       final tabs = context.read<ProductListCubit>().getCategoryTabs();
+                      print("📋 Category tabs: ${tabs.length}, Selected index: ${state.selectedCategoryIndex}");
                       return Container(
                         height: 32.h,
                         child: ListView.builder(
@@ -219,9 +243,9 @@ class _TableInOrderState extends State<TableInOrder> {
                           itemCount: tabs.length,
                           itemBuilder: (context, index) {
                             final isSelected = state.selectedCategoryIndex == index;
-
                             return GestureDetector(
                               onTap: () {
+                                print("📍 Selected category index: $index");
                                 context.read<ProductListCubit>().selectCategory(index);
                               },
                               child: AnimatedContainer(
@@ -247,6 +271,7 @@ class _TableInOrderState extends State<TableInOrder> {
                                             height: 20.h,
                                             fit: BoxFit.cover,
                                             errorBuilder: (context, error, stackTrace) {
+                                              print("🖼️ Category image error for ${tabs[index]}: $error");
                                               return Image.asset(
                                                 'assets/images/top_rated_icon_unselected.png',
                                                 width: 20.w,
@@ -280,6 +305,7 @@ class _TableInOrderState extends State<TableInOrder> {
                         ),
                       );
                     }
+                    print("⚠️ Category tabs not built: State is ${state.runtimeType}");
                     return Container(height: 32.h);
                   },
                 ),
@@ -288,7 +314,9 @@ class _TableInOrderState extends State<TableInOrder> {
 
                 // Category Title
                 BlocBuilder<ProductListCubit, ProductListState>(
+                  buildWhen: (previous, current) => previous != current,
                   builder: (context, state) {
+                    print("📋 Building category title, state: ${state.runtimeType}");
                     if (state is ProductListLoaded) {
                       final tabs = context.read<ProductListCubit>().getCategoryTabs();
                       if (tabs.isNotEmpty && state.selectedCategoryIndex < tabs.length) {
@@ -304,6 +332,7 @@ class _TableInOrderState extends State<TableInOrder> {
                         );
                       }
                     }
+                    print("⚠️ Category title not built: State is ${state.runtimeType}");
                     return SizedBox.shrink();
                   },
                 ),
@@ -311,12 +340,16 @@ class _TableInOrderState extends State<TableInOrder> {
                 // Products Grid - Dynamic from API
                 Expanded(
                   child: BlocBuilder<ProductListCubit, ProductListState>(
+                    buildWhen: (previous, current) => previous != current,
                     builder: (context, state) {
+                      print("📋 Building products grid, state: ${state.runtimeType}");
                       if (state is ProductListLoading) {
+                        print("📋 Showing loading indicator");
                         return Center(child: CircularProgressIndicator(
                           color: AppColors.primary,
                         ));
                       } else if (state is ProductListError) {
+                        print("❌ ProductListError: ${state.message}");
                         return Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -331,7 +364,10 @@ class _TableInOrderState extends State<TableInOrder> {
                               ),
                               SizedBox(height: 10.h),
                               ElevatedButton(
-                                onPressed: () => context.read<ProductListCubit>().refresh(),
+                                onPressed: () {
+                                  print("🔄 Refreshing product list");
+                                  context.read<ProductListCubit>().refresh();
+                                },
                                 child: Text('Retry'),
                               ),
                             ],
@@ -339,28 +375,51 @@ class _TableInOrderState extends State<TableInOrder> {
                         );
                       } else if (state is ProductListLoaded) {
                         final products = state.filteredProducts;
-
+                        print("📦 Rendering ${products.length} products");
+                        for (var product in products) {
+                          print("📋 Product: ${product.name}, Description: ${product.description}");
+                        }
                         if (products.isEmpty) {
+                          print("⚠️ No products found for current filter");
                           return Center(
-                            child: Text(
-                              'No products found',
-                              style: GoogleFonts.poppins(
-                                fontSize: 16.sp,
-                                color: AppColors.subColor,
-                              ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  searchController.text.isEmpty
+                                      ? 'No products available in this category'
+                                      : 'No matching products found for "${searchController.text}"',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16.sp,
+                                    color: AppColors.subColor,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                SizedBox(height: 10.h),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    print("🔄 Resetting search");
+                                    searchController.clear();
+                                    context.read<ProductListCubit>().resetProducts();
+                                  },
+                                  child: Text('Clear Search',style: TextStyle(color: AppColors.primary),),
+                                ),
+                              ],
                             ),
                           );
                         }
                         return GridView.builder(
+                          key: ValueKey('${state.selectedCategoryIndex}_${products.length}_${searchController.text}'),
                           itemCount: products.length,
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: 0.65,
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 2,
+                            childAspectRatio: 0.68,
                             crossAxisSpacing: 10,
                             mainAxisSpacing: 10,
                           ),
                           itemBuilder: (context, index) {
                             final product = products[index];
+                            print("📋 Building product card: ${product.name}");
                             return Card(
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16.r),
@@ -379,6 +438,7 @@ class _TableInOrderState extends State<TableInOrder> {
                                         width: double.infinity,
                                         fit: BoxFit.cover,
                                         errorBuilder: (context, error, stackTrace) {
+                                          print("🖼️ Image error for ${product.name}: $error");
                                           return Image.asset(
                                             "assets/images/burger.png",
                                             height: 100.h,
@@ -390,7 +450,7 @@ class _TableInOrderState extends State<TableInOrder> {
                                     ),
                                     SizedBox(height: 10.h),
                                     Text(
-                                      product.name,
+                                      product.name ?? 'Unnamed Product',
                                       style: GoogleFonts.poppins(
                                         color: AppColors.black,
                                         fontSize: 13.sp,
@@ -410,7 +470,7 @@ class _TableInOrderState extends State<TableInOrder> {
                                     Text(
                                       product.description ?? 'No description available',
                                       style: GoogleFonts.poppins(
-                                        fontSize: 10.sp,
+                                        fontSize: 8.sp,
                                         color: AppColors.subColor,
                                       ),
                                       maxLines: 2,
@@ -433,7 +493,8 @@ class _TableInOrderState extends State<TableInOrder> {
                                           radius: 16.r,
                                           child: IconButton(
                                             onPressed: () {
-                                              _showProductDialog(product);
+                                              print("➕ Opening dialog for ${product.name}");
+                                              _showProductDialog(context, product); // Pass parent context
                                             },
                                             icon: Icon(
                                               Icons.add,
@@ -451,6 +512,7 @@ class _TableInOrderState extends State<TableInOrder> {
                           },
                         );
                       }
+                      print("⚠️ No data available, state: ${state.runtimeType}");
                       return Center(child: Text('No data available'));
                     },
                   ),
@@ -463,160 +525,439 @@ class _TableInOrderState extends State<TableInOrder> {
     );
   }
 
-  void _showProductDialog(Product product) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            int? selectedVariationOptionIndex;
-            int quantity = 1;
-            Map<int, int> addonQuantities = {};
 
-            // Initialize addon quantities
-            for (var addon in product.addons) {
-              addonQuantities[addon.id] = addon.quantityAdd;
+  void _showProductDialog(BuildContext parentContext, Product product) {
+    int quantity = 1;
+    Map<int, int> addonQuantities = {};
+    Map<int, int> selectedSingleVariations = {};
+    Map<int, List<int>> selectedMultipleVariations = {};
+    Set<int> selectedExcludes = {};
+    Set<int> selectedExtras = {};
+    TextEditingController noteController = TextEditingController();
+
+    // Initialize addon quantities
+    for (var addon in product.addons) {
+      addonQuantities[addon.id] = addon.quantityAdd;
+    }
+
+    // Initialize variations
+    for (var variation in product.variations) {
+      if (variation.type == 'single') {
+        selectedSingleVariations[variation.id] = -1; // No default selection
+      } else if (variation.type == 'multiple') {
+        selectedMultipleVariations[variation.id] = [];
+      }
+    }
+
+    // Initialize extras
+    if (product.allExtras != null) {
+      for (var extra in product.allExtras!) {
+        selectedExtras.add(extra.id); // Pre-select all extras
+      }
+    }
+
+    // Calculate tax, discount, and total price
+    Map<String, double> calculateItemPrice() {
+      double basePrice = product.price;
+      double variationPrice = 0.0;
+      double addonsPrice = 0.0;
+      double totalTax = 0.0;
+      double totalDiscount = 0.0;
+
+      // Add variation prices
+      for (var variation in product.variations) {
+        if (variation.type == 'single' && selectedSingleVariations[variation.id] != null && selectedSingleVariations[variation.id]! >= 0) {
+          if (selectedSingleVariations[variation.id]! < variation.options.length) {
+            variationPrice += variation.options[selectedSingleVariations[variation.id]!].price;
+          }
+        } else if (variation.type == 'multiple') {
+          final selectedOpts = selectedMultipleVariations[variation.id] ?? [];
+          for (var optIndex in selectedOpts) {
+            if (optIndex < variation.options.length) {
+              variationPrice += variation.options[optIndex].price;
             }
+          }
+        }
+      }
 
-            double calculateItemPrice() {
-              double basePrice = product.price;
+      // Add addons price and tax
+      for (var addon in product.addons) {
+        int addonQty = addonQuantities[addon.id] ?? 0;
+        double addonBasePrice = addon.price * addonQty;
+        addonsPrice += addonBasePrice;
+        if (addon.tax != null && addon.tax!.amount != null) {
+          totalTax += addonBasePrice * (addon.tax!.amount / 100);
+        }
+      }
 
-              // Add variation price if selected
-              double variationPrice = 0;
-              if (selectedVariationOptionIndex != null && product.variations.isNotEmpty) {
-                for (var variation in product.variations) {
-                  if (variation.options.isNotEmpty &&
-                      selectedVariationOptionIndex! < variation.options.length) {
-                    variationPrice += variation.options[selectedVariationOptionIndex!].price;
-                    break;
-                  }
+      // Add extras price (assuming extras may have tax in the future)
+      if (product.allExtras != null) {
+        for (var extra in product.allExtras!) {
+          if (selectedExtras.contains(extra.id)) {
+            addonsPrice += extra.price;
+            // Add tax for extras if applicable (not in the provided response, but added for future-proofing)
+          }
+        }
+      }
+
+      // Calculate discount
+      if (product.discount != null && product.discount!.amount != null) {
+        totalDiscount = basePrice * (product.discount!.amount / 100) * quantity;
+      }
+
+      double totalPrice = (basePrice + variationPrice + addonsPrice) * quantity;
+      print("💰 Calculating price: Base: $basePrice, Variations: $variationPrice, Addons: $addonsPrice, Quantity: $quantity, Total: $totalPrice, Tax: $totalTax, Discount: $totalDiscount");
+
+      return {
+        'totalPrice': totalPrice,
+        'totalTax': totalTax,
+        'totalDiscount': totalDiscount,
+      };
+    }
+
+    showDialog(
+        context: parentContext,
+        builder: (context) {
+          return StatefulBuilder(
+            builder: (context, setDialogState) {
+              // Debug: Print product details
+              print("📦 Product Dialog: ${product.name ?? 'Unnamed Product'}");
+              print("📋 Variations: ${product.variations.length}");
+              for (var variation in product.variations) {
+                print("  - ${variation.name} (Type: ${variation
+                    .type}, Max: ${variation.max}, Min: ${variation
+                    .min}, Required: ${variation.required})");
+                for (var option in variation.options) {
+                  print("    - Option: ${option.name}, Price: ${option.price}");
                 }
               }
-
-              // Add addons price
-              double addonsPrice = 0;
+              print("📋 Addons: ${product.addons.length}");
               for (var addon in product.addons) {
-                int addonQty = addonQuantities[addon.id] ?? 0;
-                addonsPrice += (addon.price * addonQty);
+                print("  - Addon: ${addon.name}, Price: ${addon
+                    .price}, Quantity: ${addonQuantities[addon
+                    .id]}, Tax: ${addon.tax?.amount}");
               }
+              print("📋 Excludes: ${product.excludes.length}");
+              for (var exclude in product.excludes) {
+                print("  - Exclude: ${exclude.name}, ID: ${exclude.id}");
+              }
+              print("📋 Extras: ${product.allExtras?.length ?? 0}");
+              if (product.allExtras != null) {
+                for (var extra in product.allExtras!) {
+                  print(
+                      "  - Extra: ${extra.name}, ID: ${extra.id}, Price: ${extra
+                          .price}");
+                }
+              }
+              print("📋 Discount: ${product.discount?.amount ?? 'None'}");
 
-              return (basePrice + variationPrice + addonsPrice) * quantity;
-            }
-
-            return Dialog(
-              backgroundColor: AppColors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(25.r),
-              ),
-              insetPadding: EdgeInsets.symmetric(horizontal: 5.w),
-              clipBehavior: Clip.antiAlias,
-              child: Container(
-                width: MediaQuery.of(context).size.width * 0.9,
-                height: MediaQuery.of(context).size.height * 0.85,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(25.r)),
-                        child: Image.network(
-                          product.imageLink,
-                          height: 200,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Image.asset(
-                              "assets/images/burger.png",
-                              height: 200,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                            );
-                          },
+              return Dialog(
+                backgroundColor: AppColors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(25.r),
+                ),
+                insetPadding: EdgeInsets.symmetric(horizontal: 5.w),
+                clipBehavior: Clip.antiAlias,
+                child: SizedBox(
+                  width: MediaQuery
+                      .of(context)
+                      .size
+                      .width * 0.9,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.vertical(top: Radius
+                              .circular(25.r)),
+                          child: Image.network(
+                            product.imageLink,
+                            height: 200.h,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              print("🖼️ Dialog image error for ${product.name ??
+                                  'Unnamed Product'}: $error");
+                              return Image.asset(
+                                "assets/images/placeholder.png",
+                                height: 200.h,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                              );
+                            },
+                          ),
                         ),
-                      ),
-                      Padding(
-                        padding: EdgeInsets.all(12.h),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text("${quantity}"),
-                                Expanded(
-                                  child: Center(
-                                    child: Text(
-                                      product.name,
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 20.sp,
-                                        fontWeight: FontWeight.bold,
+                        Padding(
+                          padding: EdgeInsets.all(12.h),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment
+                                    .spaceBetween,
+                                children: [
+                                  Text(
+                                    "$quantity",
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 16.sp,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Center(
+                                      child: Text(
+                                        product.name ?? 'Unnamed Product',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 20.sp,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                                Row(
-                                  children: [
-                                    GestureDetector(
-                                      onTap: () {
-                                        setDialogState(() {
-                                          if (quantity > 1) quantity--;
-                                        });
-                                      },
-                                      child: Container(
-                                        width: 32.w,
-                                        height: 32.h,
-                                        decoration: BoxDecoration(
-                                          color: AppColors.borderColor,
-                                          borderRadius: BorderRadius.circular(6.r),
-                                        ),
-                                        child: Icon(
-                                          Icons.remove,
-                                          size: 16.sp,
-                                          color: AppColors.black,
+                                  Row(
+                                    children: [
+                                      GestureDetector(
+                                        onTap: () {
+                                          print(
+                                              "➖ Decrement quantity: $quantity");
+                                          setDialogState(() {
+                                            if (quantity > 1) quantity--;
+                                          });
+                                        },
+                                        child: Container(
+                                          width: 32.w,
+                                          height: 32.h,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.borderColor,
+                                            borderRadius: BorderRadius.circular(
+                                                6.r),
+                                          ),
+                                          child: Icon(
+                                            Icons.remove,
+                                            size: 16.sp,
+                                            color: AppColors.black,
+                                          ),
                                         ),
                                       ),
+                                      SizedBox(width: 8.w),
+                                      GestureDetector(
+                                        onTap: () {
+                                          print(
+                                              "➕ Increment quantity: $quantity");
+                                          setDialogState(() {
+                                            quantity++;
+                                          });
+                                        },
+                                        child: Container(
+                                          width: 32.w,
+                                          height: 32.h,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.primary,
+                                            borderRadius: BorderRadius.circular(
+                                                6.r),
+                                          ),
+                                          child: Icon(
+                                            Icons.add,
+                                            size: 16.sp,
+                                            color: AppColors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 6.h),
+                              Text(
+                                "\$${calculateItemPrice()['totalPrice']!
+                                    .toStringAsFixed(2)}",
+                                style: GoogleFonts.poppins(
+                                  fontSize: 18.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                              SizedBox(height: 12.h),
+                              Text(
+                                'Description:',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.black,
+                                ),
+                              ),
+                              SizedBox(height: 4.h),
+                              Text(
+                                product.description ??
+                                    'No description available',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14.sp,
+                                  color: AppColors.subColor,
+                                ),
+                              ),
+                              SizedBox(height: 12.h),
+
+                              // Show variations if available
+                              if (product.variations.isNotEmpty) ...[
+                                for (var variation in product.variations) ...[
+                                  Text(
+                                    variation.name,
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 16.sp,
+                                      color: AppColors.black,
                                     ),
-                                    SizedBox(width: 8.w),
-                                    GestureDetector(
-                                      onTap: () {
-                                        setDialogState(() {
-                                          quantity++;
-                                        });
-                                      },
-                                      child: Container(
-                                        width: 32.w,
-                                        height: 32.h,
-                                        decoration: BoxDecoration(
-                                          color: AppColors.primary,
-                                          borderRadius: BorderRadius.circular(6.r),
-                                        ),
-                                        child: Icon(
-                                          Icons.add,
-                                          size: 16.sp,
-                                          color: AppColors.white,
-                                        ),
+                                  ),
+                                  if (variation.required == 1 ||
+                                      (variation.min != null &&
+                                          variation.min! > 0)) ...[
+                                    Text(
+                                      'Required: Select at least ${variation
+                                          .min ?? 1} option${(variation.min ??
+                                          1) > 1 ? 's' : ''}',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12.sp,
+                                        color: AppColors.red,
                                       ),
                                     ),
                                   ],
-                                ),
+                                  if (variation.max != null &&
+                                      variation.max! > 0) ...[
+                                    Text(
+                                      'Maximum: ${variation
+                                          .max} option${variation.max! > 1
+                                          ? 's'
+                                          : ''}',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12.sp,
+                                        color: AppColors.subColor,
+                                      ),
+                                    ),
+                                  ],
+                                  SizedBox(height: 8.h),
+                                  if (variation.type == 'single') ...[
+                                    Wrap(
+                                      key: ValueKey(
+                                          'variation_${variation.id}'),
+                                      spacing: 8.w,
+                                      runSpacing: 8.h,
+                                      children: variation.options
+                                          .asMap()
+                                          .entries
+                                          .map((entry) {
+                                        int optionIndex = entry.key;
+                                        var option = entry.value;
+                                        final isSelected = selectedSingleVariations[variation
+                                            .id] == optionIndex;
+                                        return GestureDetector(
+                                          onTap: () {
+                                            print(
+                                                "📍 Single variation tapped: ${option
+                                                    .name}, Index: $optionIndex, IsSelected: $isSelected");
+                                            setDialogState(() {
+                                              selectedSingleVariations[variation
+                                                  .id] =
+                                              isSelected ? -1 : optionIndex;
+                                            });
+                                          },
+                                          child: Container(
+                                            padding: EdgeInsets.symmetric(
+                                                horizontal: 12.w,
+                                                vertical: 6.h),
+                                            decoration: BoxDecoration(
+                                              color: isSelected ? AppColors
+                                                  .primary : AppColors
+                                                  .borderColor,
+                                              borderRadius: BorderRadius
+                                                  .circular(6.r),
+                                              border: Border.all(
+                                                color: isSelected ? AppColors
+                                                    .yellow : Colors
+                                                    .transparent,
+                                                width: 2,
+                                              ),
+                                            ),
+                                            child: Text(
+                                              "${option.name} (+\$${option.price
+                                                  .toStringAsFixed(0)})",
+                                              style: TextStyle(
+                                                fontSize: 12.sp,
+                                                color: isSelected ? AppColors
+                                                    .white : AppColors.black,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ] else
+                                    if (variation.type == 'multiple') ...[
+                                      Column(
+                                        key: ValueKey(
+                                            'variation_${variation.id}'),
+                                        crossAxisAlignment: CrossAxisAlignment
+                                            .start,
+                                        children: variation.options
+                                            .asMap()
+                                            .entries
+                                            .map((entry) {
+                                          int optionIndex = entry.key;
+                                          var option = entry.value;
+                                          final isSelected = (selectedMultipleVariations[variation
+                                              .id] ?? []).contains(optionIndex);
+                                          return CheckboxListTile(
+                                            key: ValueKey('option_${variation
+                                                .id}_$optionIndex'),
+                                            title: Text(
+                                              "${option.name} (+\$${option.price
+                                                  .toStringAsFixed(0)})",
+                                              style: GoogleFonts.poppins(
+                                                  fontSize: 12.sp),
+                                            ),
+                                            value: isSelected,
+                                            onChanged: (bool? value) {
+                                              print(
+                                                  "📍 Multiple variation ${option
+                                                      .name}: $value");
+                                              setDialogState(() {
+                                                var selected = selectedMultipleVariations[variation
+                                                    .id] ?? [];
+                                                if (value == true) {
+                                                  if (selected.length <
+                                                      (variation.max ?? 999)) {
+                                                    selected.add(optionIndex);
+                                                  } else {
+                                                    print(
+                                                        "⚠️ Max selections reached for ${variation
+                                                            .name}: ${variation
+                                                            .max}");
+                                                    ToastMessage.toastMessage(
+                                                        'Maximum quantity reached for ${variation
+                                                            .name} (${variation
+                                                            .max})',
+                                                        AppColors.primary,
+                                                        AppColors.white);
+                                                  }
+                                                } else {
+                                                  selected.remove(optionIndex);
+                                                }
+                                                selectedMultipleVariations[variation
+                                                    .id] = selected;
+                                              });
+                                            },
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ],
+                                  SizedBox(height: 12.h),
+                                ],
                               ],
-                            ),
-                            SizedBox(height: 6.h),
-                            Text(
-                              "\$${calculateItemPrice().toStringAsFixed(2)}",
-                              style: GoogleFonts.poppins(
-                                fontSize: 18.sp,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                            SizedBox(height: 12.h),
 
-                            // Show variations if available
-                            if (product.variations.isNotEmpty) ...[
-                              for (var variation in product.variations) ...[
+                              // Show addons
+                              if (product.addons.isNotEmpty) ...[
                                 Text(
-                                  variation.name,
+                                  'Add ons',
                                   style: GoogleFonts.poppins(
                                     fontWeight: FontWeight.w600,
                                     fontSize: 16.sp,
@@ -624,93 +965,184 @@ class _TableInOrderState extends State<TableInOrder> {
                                   ),
                                 ),
                                 SizedBox(height: 8.h),
-                                if (variation.type == 'single') ...[
-                                  Wrap(
-                                    children: variation.options.map((option) {
-                                      int optionIndex = variation.options.indexOf(option);
-                                      final isSelected = selectedVariationOptionIndex == optionIndex;
-                                      return Padding(
-                                        padding: EdgeInsets.only(right: 8.w, bottom: 8.h),
-                                        child: GestureDetector(
-                                          onTap: () {
-                                            setDialogState(() {
-                                              selectedVariationOptionIndex = isSelected ? null : optionIndex;
-                                            });
-                                          },
-                                          child: Container(
-                                            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                                            decoration: BoxDecoration(
-                                              color: isSelected ? AppColors.primary : AppColors.borderColor,
-                                              borderRadius: BorderRadius.circular(6.r),
-                                              border: Border.all(
-                                                color: isSelected ? AppColors.yellow : Colors.transparent,
-                                                width: 2,
-                                              ),
-                                            ),
-                                            child: Text(
-                                              "${option.name} (+\$${option.price.toStringAsFixed(0)})",
-                                              style: TextStyle(
-                                                fontSize: 12.sp,
-                                                color: isSelected ? AppColors.white : AppColors.black,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    }).toList(),
-                                  ),
-                                ],
-                                SizedBox(height: 12.h),
-                              ],
-                            ],
-
-                            // Show addons
-                            if (product.addons.isNotEmpty) ...[
-                              Text(
-                                'Add ons',
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 16.sp,
-                                  color: AppColors.black,
-                                ),
-                              ),
-                              ...product.addons.map(
-                                    (addon) => Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 4.h),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Expanded(
+                                ...product.addons.map(
+                                      (addon) =>
+                                      Padding(
+                                        key: ValueKey('addon_${addon.id}'),
+                                        padding: EdgeInsets.symmetric(
+                                            vertical: 4.h),
                                         child: Row(
+                                          mainAxisAlignment: MainAxisAlignment
+                                              .spaceBetween,
                                           children: [
-                                            Container(
-                                              width: 40.w,
-                                              height: 40.h,
-                                              decoration: BoxDecoration(
-                                                color: AppColors.borderColor,
-                                                borderRadius: BorderRadius.circular(8.r),
-                                              ),
-                                              child: Icon(Icons.fastfood, size: 20.sp),
-                                            ),
-                                            SizedBox(width: 8.w),
                                             Expanded(
-                                              child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                              child: Row(
                                                 children: [
+                                                  Container(
+                                                    width: 40.w,
+                                                    height: 40.h,
+                                                    decoration: BoxDecoration(
+                                                      color: AppColors
+                                                          .borderColor,
+                                                      borderRadius: BorderRadius
+                                                          .circular(8.r),
+                                                    ),
+                                                    child: Icon(Icons.fastfood,
+                                                        size: 20.sp),
+                                                  ),
+                                                  SizedBox(width: 8.w),
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment: CrossAxisAlignment
+                                                          .start,
+                                                      children: [
+                                                        Text(
+                                                          addon.name,
+                                                          style: GoogleFonts
+                                                              .poppins(
+                                                            fontSize: 14.sp,
+                                                            fontWeight: FontWeight
+                                                                .w600,
+                                                            color: AppColors
+                                                                .black,
+                                                          ),
+                                                        ),
+                                                        Text(
+                                                          "\$${addon.price
+                                                              .toStringAsFixed(
+                                                              0)}",
+                                                          style: GoogleFonts
+                                                              .poppins(
+                                                            fontSize: 12.sp,
+                                                            color: AppColors
+                                                                .subColor,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            Container(
+                                              decoration: BoxDecoration(
+                                                border: Border.all(
+                                                    color: AppColors
+                                                        .borderColor),
+                                                borderRadius: BorderRadius
+                                                    .circular(10.r),
+                                                color: AppColors.white,
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  GestureDetector(
+                                                    onTap: () {
+                                                      print(
+                                                          "➖ Decrement addon ${addon
+                                                              .name}: ${addonQuantities[addon
+                                                              .id]}");
+                                                      setDialogState(() {
+                                                        if ((addonQuantities[addon
+                                                            .id] ?? 0) > 0) {
+                                                          addonQuantities[addon
+                                                              .id] =
+                                                              (addonQuantities[addon
+                                                                  .id] ?? 0) -
+                                                                  1;
+                                                        }
+                                                      });
+                                                    },
+                                                    child: Container(
+                                                      width: 32.w,
+                                                      height: 32.h,
+                                                      decoration: BoxDecoration(
+                                                        color: AppColors
+                                                            .borderColor,
+                                                        borderRadius: BorderRadius
+                                                            .circular(4.r),
+                                                      ),
+                                                      child: Icon(
+                                                        Icons.remove,
+                                                        size: 16.sp,
+                                                        color: AppColors.black,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  SizedBox(width: 8.w),
                                                   Text(
-                                                    addon.name,
+                                                    "${addonQuantities[addon
+                                                        .id] ?? 0}",
                                                     style: GoogleFonts.poppins(
                                                       fontSize: 14.sp,
-                                                      fontWeight: FontWeight.w600,
+                                                      fontWeight: FontWeight
+                                                          .w600,
                                                       color: AppColors.black,
                                                     ),
                                                   ),
-                                                  Text(
-                                                    "\$${addon.price.toStringAsFixed(0)}",
-                                                    style: GoogleFonts.poppins(
-                                                      fontSize: 12.sp,
-                                                      color: AppColors.subColor,
+                                                  SizedBox(width: 8.w),
+                                                  GestureDetector(
+                                                    onTap: () {
+                                                      print(
+                                                          "➕ Increment addon ${addon
+                                                              .name}: ${addonQuantities[addon
+                                                              .id]}");
+                                                      setDialogState(() {
+                                                        int currentQuantity = addonQuantities[addon
+                                                            .id] ?? 0;
+                                                        int maxAllowed = addon
+                                                            .quantityAdd == 0
+                                                            ? 1
+                                                            : 999;
+                                                        if (currentQuantity <
+                                                            maxAllowed) {
+                                                          addonQuantities[addon
+                                                              .id] =
+                                                              currentQuantity +
+                                                                  1;
+                                                        } else {
+                                                          print(
+                                                              "⚠️ Max quantity reached for ${addon
+                                                                  .name}: $maxAllowed");
+                                                          ToastMessage
+                                                              .toastMessage(
+                                                              'Maximum quantity reached for ${addon
+                                                                  .name} ($maxAllowed)',
+                                                              AppColors.primary,
+                                                              AppColors.white);
+                                                        }
+                                                      });
+                                                    },
+                                                    child: Container(
+                                                      width: 32.w,
+                                                      height: 32.h,
+                                                      decoration: BoxDecoration(
+                                                        color: addonQuantities[addon
+                                                            .id] != null &&
+                                                            addonQuantities[addon
+                                                                .id]! >= (addon
+                                                                .quantityAdd ==
+                                                                0 ? 1 : 999)
+                                                            ? AppColors
+                                                            .borderColor
+                                                            .withOpacity(0.5)
+                                                            : AppColors
+                                                            .borderColor,
+                                                        borderRadius: BorderRadius
+                                                            .circular(4.r),
+                                                      ),
+                                                      child: Icon(
+                                                        Icons.add,
+                                                        size: 16.sp,
+                                                        color: addonQuantities[addon
+                                                            .id] != null &&
+                                                            addonQuantities[addon
+                                                                .id]! >= (addon
+                                                                .quantityAdd ==
+                                                                0 ? 1 : 999)
+                                                            ? AppColors.subColor
+                                                            : AppColors.black,
+                                                      ),
                                                     ),
                                                   ),
                                                 ],
@@ -719,130 +1151,275 @@ class _TableInOrderState extends State<TableInOrder> {
                                           ],
                                         ),
                                       ),
-                                      Container(
-                                        decoration: BoxDecoration(
-                                          border: Border.all(color: AppColors.borderColor),
-                                          borderRadius: BorderRadius.circular(10.r),
-                                          color: AppColors.white,
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            GestureDetector(
-                                              onTap: () {
-                                                setDialogState(() {
-                                                  if ((addonQuantities[addon.id] ?? 0) > 0) {
-                                                    addonQuantities[addon.id] = (addonQuantities[addon.id] ?? 0) - 1;
-                                                  }
-                                                });
-                                              },
-                                              child: Container(
-                                                width: 32.w,
-                                                height: 32.h,
-                                                decoration: BoxDecoration(
-                                                  color: AppColors.borderColor,
-                                                  borderRadius: BorderRadius.circular(4.r),
-                                                ),
-                                                child: Icon(
-                                                  Icons.remove,
-                                                  size: 16.sp,
-                                                  color: AppColors.black,
-                                                ),
-                                              ),
-                                            ),
-                                            SizedBox(width: 8.w),
-                                            Text(
-                                              "${addonQuantities[addon.id] ?? 0}",
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 14.sp,
-                                                fontWeight: FontWeight.w600,
-                                                color: AppColors.black,
-                                              ),
-                                            ),
-                                            SizedBox(width: 8.w),
-                                            GestureDetector(
-                                              onTap: () {
-                                                setDialogState(() {
-                                                  addonQuantities[addon.id] = (addonQuantities[addon.id] ?? 0) + 1;
-                                                });
-                                              },
-                                              child: Container(
-                                                width: 32.w,
-                                                height: 32.h,
-                                                decoration: BoxDecoration(
-                                                  color: AppColors.borderColor,
-                                                  borderRadius: BorderRadius.circular(4.r),
-                                                ),
-                                                child: Icon(
-                                                  Icons.add,
-                                                  size: 16.sp,
-                                                  color: AppColors.black,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
+                                ),
+                              ],
+
+                              // Show excludes
+                              if (product.excludes.isNotEmpty) ...[
+                                SizedBox(height: 12.h),
+                                Text(
+                                  'Excludes',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16.sp,
+                                    color: AppColors.black,
                                   ),
+                                ),
+                                Column(
+                                  children: product.excludes.map((exclude) {
+                                    final isSelected = selectedExcludes
+                                        .contains(exclude.id);
+                                    return CheckboxListTile(
+                                      key: ValueKey('exclude_${exclude.id}'),
+                                      title: Text(
+                                        exclude.name,
+                                        style: GoogleFonts.poppins(
+                                            fontSize: 14.sp),
+                                      ),
+                                      value: isSelected,
+                                      onChanged: (bool? value) {
+                                        print("📍 Exclude ${exclude
+                                            .name}: $value");
+                                        setDialogState(() {
+                                          if (value == true) {
+                                            selectedExcludes.add(exclude.id);
+                                          } else {
+                                            selectedExcludes.remove(exclude.id);
+                                          }
+                                        });
+                                      },
+                                    );
+                                  }).toList(),
+                                ),
+                              ],
+
+                              // Show extras
+                              if (product.allExtras != null &&
+                                  product.allExtras!.isNotEmpty) ...[
+                                SizedBox(height: 12.h),
+                                Text(
+                                  'Extras',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16.sp,
+                                    color: AppColors.black,
+                                  ),
+                                ),
+                                Column(
+                                  children: product.allExtras!.map((extra) {
+                                    final isSelected = selectedExtras.contains(
+                                        extra.id);
+                                    return CheckboxListTile(
+                                      key: ValueKey('extra_${extra.id}'),
+                                      title: Text(
+                                        "${extra.name} (+\$${extra.price
+                                            .toStringAsFixed(0)})",
+                                        style: GoogleFonts.poppins(
+                                            fontSize: 14.sp),
+                                      ),
+                                      value: isSelected,
+                                      onChanged: (bool? value) {
+                                        print("📍 Extra ${extra.name}: $value");
+                                        setDialogState(() {
+                                          if (value == true) {
+                                            selectedExtras.add(extra.id);
+                                          } else {
+                                            selectedExtras.remove(extra.id);
+                                          }
+                                        });
+                                      },
+                                    );
+                                  }).toList(),
+                                ),
+                              ],
+
+                              // Show notes
+                              SizedBox(height: 12.h),
+                              Text(
+                                'Notes',
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 16.sp,
+                                  color: AppColors.black,
+                                ),
+                              ),
+                              SizedBox(height: 8.h),
+                              TextFormField(
+                                controller: noteController,
+                                decoration: InputDecoration(
+                                  hintText: "Add any special requests...",
+                                  hintStyle: GoogleFonts.poppins(
+                                    fontSize: 14.sp,
+                                    color: AppColors.subColor,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                  ),
+                                ),
+                                maxLines: 3,
+                              ),
+
+                              SizedBox(height: 30.h),
+                              CustomElevatedButton(
+                                text: "Add To Order",
+                                onPressed: () {
+                                  // Validate required and min requirements for variations
+                                  bool isValid = true;
+                                  for (var variation in product.variations) {
+                                    if (variation.required == 1 ||
+                                        (variation.min != null &&
+                                            variation.min! > 0)) {
+                                      if (variation.type == 'single' &&
+                                          selectedSingleVariations[variation
+                                              .id] == -1) {
+                                        isValid = false;
+                                        print("⚠️ Validation failed: ${variation
+                                            .name} is required");
+                                        ToastMessage.toastMessage("Please select an option for ${variation
+                                            .name}", AppColors.red,
+                                            AppColors.white);
+                                      } else if (variation.type == 'multiple') {
+                                        final selectedCount = (selectedMultipleVariations[variation
+                                            .id] ?? []).length;
+                                        final minRequired = variation.min ?? 1;
+                                        if (selectedCount < minRequired) {
+                                          isValid = false;
+                                          print(
+                                              "⚠️ Validation failed: Select at least $minRequired option${minRequired >
+                                                  1 ? 's' : ''} for ${variation
+                                                  .name}");
+                                          ScaffoldMessenger.of(parentContext)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                  "Please select at least $minRequired option${minRequired >
+                                                      1
+                                                      ? 's'
+                                                      : ''} for ${variation
+                                                      .name}"),
+                                              behavior: SnackBarBehavior
+                                                  .floating,
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    }
+                                  }
+
+                                  if (isValid) {
+                                    // Calculate prices
+                                    final prices = calculateItemPrice();
+
+                                    // Create new order details
+                                    Map<String, dynamic> newOrder = {
+                                      'amount': prices['totalPrice'],
+                                      'total_tax': prices['totalTax'],
+                                      'total_discount': prices['totalDiscount'],
+                                      'table_id': ModalRoute
+                                          .of(parentContext)
+                                          ?.settings
+                                          .arguments != null
+                                          ? (ModalRoute
+                                          .of(parentContext)!
+                                          .settings
+                                          .arguments as Map)['id']
+                                          : null,
+                                      'products': [
+                                        {
+                                          'product_id': product.id,
+                                          'count': quantity,
+                                          'note': noteController.text.isNotEmpty
+                                              ? noteController.text
+                                              : null,
+                                          'addons': product.addons
+                                              .asMap()
+                                              .entries
+                                              .where((entry) =>
+                                          (addonQuantities[entry.value.id] ??
+                                              0) > 0)
+                                              .map((entry) =>
+                                          {
+                                            'addon_id': entry.value.id,
+                                            'count': addonQuantities[entry.value
+                                                .id],
+                                          })
+                                              .toList(),
+                                          'exclude_id': selectedExcludes
+                                              .toList(),
+                                          'extra_id': selectedExtras.toList(),
+                                          'variation': product.variations.map((
+                                              variation) =>
+                                          {
+                                            'variation_id': variation.id,
+                                            'option_id': variation.type ==
+                                                'single'
+                                                ? (selectedSingleVariations[variation
+                                                .id] != null &&
+                                                selectedSingleVariations[variation
+                                                    .id]! >= 0
+                                                ? [
+                                              variation
+                                                  .options[selectedSingleVariations[variation
+                                                  .id]!].id
+                                            ]
+                                                : [])
+                                                : (selectedMultipleVariations[variation
+                                                .id] ?? [])
+                                                .map((index) =>
+                                            variation.options[index].id)
+                                                .toList(),
+                                          }).toList(),
+                                        }
+                                      ],
+                                    };
+
+                                    // Check if there are existing orders
+                                    final existingArgs = ModalRoute
+                                        .of(parentContext)
+                                        ?.settings
+                                        .arguments as Map<String, dynamic>?;
+                                    List<Map<String,
+                                        dynamic>> existingProducts = [];
+                                    if (existingArgs != null &&
+                                        existingArgs['products'] != null) {
+                                      existingProducts =
+                                      List<Map<String, dynamic>>.from(
+                                          existingArgs['products']);
+                                    }
+
+                                    // Combine new order with existing orders
+                                    existingProducts.addAll(
+                                        newOrder['products']);
+                                    newOrder['products'] = existingProducts;
+
+                                    print(
+                                        "📦 Combined Order Details: $newOrder");
+                                    Navigator.pushNamed(
+                                      context,
+                                      AppRoutes.confirmOrder,
+                                      arguments: newOrder,
+                                    );
+                                  }
+                                },
+                                backgroundColor: AppColors.primary,
+                                textStyle: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16.sp,
+                                  color: AppColors.white,
                                 ),
                               ),
                             ],
-
-                            SizedBox(height: 30.h),
-                            CustomElevatedButton(
-                              text: "Add To Order",
-                              onPressed: () {
-                                // Create order details with real product data
-                                Map<String, dynamic> orderDetails = {
-                                  'productId': product.id,
-                                  'title': product.name,
-                                  'basePrice': product.price,
-                                  'quantity': quantity,
-                                  'selectedVariation': selectedVariationOptionIndex != null && product.variations.isNotEmpty
-                                      ? {
-                                    'variationId': product.variations.first.id,
-                                    'optionId': product.variations.first.options[selectedVariationOptionIndex!].id,
-                                    'name': product.variations.first.options[selectedVariationOptionIndex!].name,
-                                    'price': product.variations.first.options[selectedVariationOptionIndex!].price,
-                                  }
-                                      : null,
-                                  'addons': product.addons.where((addon) => (addonQuantities[addon.id] ?? 0) > 0)
-                                      .map((addon) => {
-                                    'id': addon.id,
-                                    'name': addon.name,
-                                    'price': addon.price,
-                                    'quantity': addonQuantities[addon.id],
-                                  })
-                                      .toList(),
-                                  'totalPrice': calculateItemPrice(),
-                                  'image': product.imageLink,
-                                };
-
-                                Navigator.pushNamed(
-                                  context,
-                                  AppRoutes.confirmOrder,
-                                  arguments: orderDetails,
-                                );
-                              },
-                              backgroundColor: AppColors.primary,
-                              textStyle: GoogleFonts.poppins(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 16.sp,
-                                color: AppColors.white,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            );
-          },
-        );
-      },
+              );
+            },
+          );
+        }
     );
   }
-}
+  }
+
