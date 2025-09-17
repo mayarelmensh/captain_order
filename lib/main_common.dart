@@ -44,6 +44,8 @@ class MyApp extends StatelessWidget {
         providers: [
          BlocProvider(create:(context) => DineInTablesCubit()..loadCafeData(),),
          BlocProvider(create:(context) => LoginCubit()),
+         BlocProvider(create:(context) => OrderCubit()),
+         BlocProvider(create:(context) => LoginCubit()),
          BlocProvider(create:(context) => ProductListCubit()..getProductLists()),
          BlocProvider( create: (context) => OrderCubit(),)
 
@@ -64,6 +66,29 @@ class MyApp extends StatelessWidget {
             AppRoutes.tableInOrder: (context) =>  TableInOrder(),
             AppRoutes.confirmOrder: (context) =>  ConfirmOrderScreen(),
             AppRoutes.selectService: (context) =>  SelectServiceScreen(),
+          },
+        ),
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider(
+            create: (context) => OrderCubit(),
+          ),
+
+        ],
+        child: MaterialApp(
+          theme: ThemeData(
+            scaffoldBackgroundColor: AppColors.backGround,
+          ),
+          debugShowCheckedModeBanner: false,
+          title: config.appName,
+          initialRoute: AppRoutes.splashRoute,
+          routes: {
+            AppRoutes.splashRoute: (context) => const SplashScreen(),
+            AppRoutes.loginRoute: (context) => const LoginScreen(),
+            AppRoutes.dineInTablesRoute: (context) => DineInTablesScreen(),
+            AppRoutes.tableInOrder: (context) => TableInOrder(),
+            AppRoutes.confirmOrder: (context) => ConfirmOrderScreen(),
+            AppRoutes.selectService: (context) => SelectServiceScreen(),
           },
         ),
       ),

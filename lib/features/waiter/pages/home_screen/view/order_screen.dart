@@ -416,8 +416,8 @@ class OrderListWidget extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            SizedBox(height: MediaQuery.of(context).size.height * 0.16,),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
@@ -471,9 +471,9 @@ class OrderListWidget extends StatelessWidget {
                 ),
               ),
             ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.2, end: 0),
-            const SizedBox(height: 24),
             Expanded(
               child: ListView.builder(
+                padding: const EdgeInsets.only(top: 20),
                 itemCount: orders.length,
                 itemBuilder: (context, index) {
                   return OrderCard(order: orders[index])
@@ -483,6 +483,7 @@ class OrderListWidget extends StatelessWidget {
                 },
               ),
             ),
+
           ],
         ),
       ),
