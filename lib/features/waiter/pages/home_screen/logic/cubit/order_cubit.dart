@@ -1,179 +1,164 @@
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:dio/dio.dart';
-import 'package:food_2_go/controller/api/end_points.dart';
+
 import 'dart:developer';
 
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:food_2_go/controller/api/end_points.dart';
 import '../../../../../../controller/dio/dio_helper.dart';
-import '../model/order_models.dart';
+import '../../../../../../controller/cache/shared_preferences_utils.dart';
+import '../model/order_item.dart';
+import '../model/order_list.dart';
 import 'order_state.dart';
 
 class OrderCubit extends Cubit<OrderState> {
   OrderCubit() : super(OrderInitial());
 
-  static OrderCubit get(context) => BlocProvider.of(context);
+  List<Orders> orders = [];
+  OrderItem? currentOrderDetails;
 
-  OrderModels? orderModels;
-
-  Future<void> getOrders({String? token}) async {
+  Future<void> getOrders() async {
     emit(OrderLoading());
 
     try {
+      String? token = await SharedPreferenceUtils.getData(key: 'token') as String?;
+
+      if (token == null) {
+        log("❌ No token found");
+        emit(OrderError('Authentication required. Please login again.'));
+        return;
+      }
+
+      log("🔑 Using Token: $token");
+
       final response = await DioHelper.getData(
-        url: EndPoints.orders,
-        token: token,
+          url: EndPoints.ordersList,
+          token: token
       );
 
+      log("📦 Orders Response: ${response.data}");
+
       if (response.statusCode == 200) {
-        orderModels = OrderModels.fromJson(response.data);
-        emit(OrderSuccess(orderModels!));
-        log('📦 Orders loaded successfully: ${orderModels?.orders?.length} orders');
+        final orderList = OrderList.fromJson(response.data);
+        orders = orderList.orders ?? [];
+
+        log("✅ Orders Count: ${orders.length}");
+        emit(OrderSuccess());
       } else {
-        emit(OrderError('Failed to load orders: ${response.statusMessage}'));
+        emit(OrderError('Failed to load orders'));
       }
-    } on DioException catch (e) {
-      String errorMessage = 'Network error occurred';
-
-      if (e.response != null) {
-        errorMessage = 'Server error: ${e.response?.statusCode} - ${e.response?.data}';
-      } else if (e.type == DioExceptionType.connectionTimeout) {
-        errorMessage = 'Connection timeout';
-      } else if (e.type == DioExceptionType.receiveTimeout) {
-        errorMessage = 'Receive timeout';
-      }
-
-      log('❌ Error loading orders: $errorMessage');
-      emit(OrderError(errorMessage));
     } catch (e) {
-      log('❌ Unexpected error: $e');
-      emit(OrderError('An unexpected error occurred'));
+      log("⚠️ Orders Exception: $e");
+
+      if (e.toString().contains('401') || e.toString().contains('Unauthorized')) {
+        emit(OrderError('Session expired. Please login again.'));
+      } else {
+        emit(OrderError('Something went wrong while loading orders'));
+      }
     }
   }
 
-  Future<void> getOrderById(int orderId, {String? token}) async {
-    emit(OrderLoading());
+  // Method to get order details
+  Future<void> getOrderDetails(int orderId) async {
+    emit(OrderDetailsLoading());
 
     try {
+      String? token = await SharedPreferenceUtils.getData(key: 'token') as String?;
+
+      if (token == null) {
+        log("❌ No token found");
+        emit(OrderError('Authentication required. Please login again.'));
+        return;
+      }
+
+      log("🔑 Getting order details for ID: $orderId");
+
       final response = await DioHelper.getData(
-        url: '${EndPoints.orders}/$orderId',
-        token: token,
+          url: EndPoints.orderItem(orderId),
+          token: token
       );
 
+      log("📋 Order Details Response: ${response.data}");
+
       if (response.statusCode == 200) {
-        final order = Orders.fromJson(response.data);
-        orderModels = OrderModels(orders: [order]);
-        emit(OrderSuccess(orderModels!));
-        log('📦 Order loaded successfully: Order ID ${order.id}');
+        currentOrderDetails = OrderItem.fromJson(response.data);
+        log("✅ Order details loaded successfully");
+        emit(OrderDetailsSuccess());
       } else {
-        emit(OrderError('Failed to load order: ${response.statusMessage}'));
+        emit(OrderError('Failed to load order details'));
       }
-    } on DioException catch (e) {
-      String errorMessage = 'Network error occurred';
-
-      if (e.response != null) {
-        errorMessage = 'Server error: ${e.response?.statusCode} - ${e.response?.data}';
-      }
-
-      log('❌ Error loading order: $errorMessage');
-      emit(OrderError(errorMessage));
     } catch (e) {
-      log('❌ Unexpected error: $e');
-      emit(OrderError('An unexpected error occurred'));
+      log("⚠️ Order Details Exception: $e");
+
+      if (e.toString().contains('401') || e.toString().contains('Unauthorized')) {
+        emit(OrderError('Session expired. Please login again.'));
+      } else {
+        emit(OrderError('Something went wrong while loading order details'));
+      }
     }
   }
 
-  Future<void> updateOrderStatus(int orderId, String status, {String? token}) async {
-    try {
-      final response = await DioHelper.patchData(
-        url: '${EndPoints.orders}/$orderId',
-        data: {'prepration_status': status},
-        token: token,
-      );
+  // Method to pickup order (update status)
+  Future<void> pickupOrder(int orderId) async {
+    emit(OrderPickupLoading());
 
-      if (response.statusCode == 200) {
-        if (orderModels?.orders != null) {
-          final orderIndex = orderModels!.orders!.indexWhere((order) => order.id == orderId);
-          if (orderIndex != -1) {
-            orderModels!.orders![orderIndex].preprationStatus = status;
-            emit(OrderSuccess(orderModels!));
-          }
-        }
-        log('✅ Order status updated successfully');
-      } else {
-        emit(OrderError('Failed to update order status'));
+    try {
+      String? token = await SharedPreferenceUtils.getData(key: 'token') as String?;
+
+      if (token == null) {
+        log("❌ No token found");
+        emit(OrderError('Authentication required. Please login again.'));
+        return;
       }
-    } catch (e) {
-      log('❌ Error updating order status: $e');
-      emit(OrderError('Failed to update order status'));
-    }
-  }
 
-  Future<void> pickupOrder(int orderId, {String? token}) async {
-    try {
+      log("📦 Picking up order ID: $orderId");
+
       final response = await DioHelper.putData(
-        url: '/waiter/orders/status/$orderId',
-        token: token,
+          url: EndPoints.orderStatus(orderId),
+          token: token,
+          data: {
+            'status': 'picked_up', // or whatever status value your API expects
+          }
       );
 
+      log("✅ Pickup Response: ${response.data}");
+
       if (response.statusCode == 200) {
-        if (orderModels?.orders != null) {
-          final orderIndex = orderModels!.orders!.indexWhere((order) => order.id == orderId);
-          if (orderIndex != -1) {
-            orderModels!.orders![orderIndex].preprationStatus = 'picked_up';
-            emit(OrderSuccess(orderModels!));
-          }
-        }
-        log('✅ Order picked up successfully');
+        log("✅ Order picked up successfully");
+        emit(OrderPickupSuccess());
+
+        // Optionally refresh orders list to update status
+        await refreshOrders();
       } else {
         emit(OrderError('Failed to pickup order'));
       }
-    } on DioException catch (e) {
-      String errorMessage = 'Network error occurred';
-
-      if (e.response != null) {
-        errorMessage = 'Server error: ${e.response?.statusCode} - ${e.response?.data}';
-      } else if (e.type == DioExceptionType.connectionTimeout) {
-        errorMessage = 'Connection timeout';
-      } else if (e.type == DioExceptionType.receiveTimeout) {
-        errorMessage = 'Receive timeout';
-      }
-
-      log('❌ Error picking up order: $errorMessage');
-      emit(OrderError(errorMessage));
     } catch (e) {
-      log('❌ Unexpected error during pickup: $e');
-      emit(OrderError('Failed to pickup order'));
+      log("⚠️ Pickup Order Exception: $e");
+
+      if (e.toString().contains('401') || e.toString().contains('Unauthorized')) {
+        emit(OrderError('Session expired. Please login again.'));
+      } else {
+        emit(OrderError('Something went wrong while picking up order'));
+      }
     }
   }
 
-  List<Orders> getOrdersByStatus(String status) {
-    if (orderModels?.orders == null) return [];
-
-    return orderModels!.orders!
-        .where((order) => order.preprationStatus == status)
-        .toList();
+  Future<void> refreshOrders() async {
+    await getOrders();
   }
 
-  List<Orders> getOrdersByTable(int tableId) {
-    if (orderModels?.orders == null) return [];
-
-    return orderModels!.orders!
-        .where((order) => order.tableId == tableId)
-        .toList();
+  Future<bool> isAuthenticated() async {
+    String? token = await SharedPreferenceUtils.getData(key: 'token') as String?;
+    return token != null && token.isNotEmpty;
   }
 
-  double getTotalAmount() {
-    if (orderModels?.orders == null) return 0.0;
-
-    return orderModels!.orders!
-        .fold(0.0, (total, order) => total + (order.amount?.toDouble() ?? 0.0));
-  }
-
-  int getOrdersCountByStatus(String status) {
-    return getOrdersByStatus(status).length;
-  }
-
-  void clearOrders() {
-    orderModels = null;
+  Future<void> logout() async {
+    await SharedPreferenceUtils.removeData(key: 'token');
+    orders.clear();
+    currentOrderDetails = null;
     emit(OrderInitial());
+  }
+
+  // Helper method to clear order details
+  void clearOrderDetails() {
+    currentOrderDetails = null;
   }
 }

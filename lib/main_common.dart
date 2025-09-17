@@ -15,6 +15,7 @@ import 'features/captin/pages/dine_in_tables_screen/view/dine_in_tables_screen.d
 import 'features/captin/pages/dine_in_tables_screen/view/select_service.dart';
 import 'features/captin/pages/splash_screen/splash_screen.dart';
 import 'features/captin/pages/table_in_order/view/table_in_order.dart';
+import 'features/waiter/pages/home_screen/logic/cubit/order_cubit.dart';
 
 Future<void> mainCommon(AppConfig config) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -59,6 +60,29 @@ class MyApp extends StatelessWidget {
             AppRoutes.tableInOrder: (context) =>  TableInOrder(),
             AppRoutes.confirmOrder: (context) =>  ConfirmOrderScreen(),
             AppRoutes.selectService: (context) =>  SelectServiceScreen(),
+          },
+        ),
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider(
+            create: (context) => OrderCubit(),
+          ),
+
+        ],
+        child: MaterialApp(
+          theme: ThemeData(
+            scaffoldBackgroundColor: AppColors.backGround,
+          ),
+          debugShowCheckedModeBanner: false,
+          title: config.appName,
+          initialRoute: AppRoutes.splashRoute,
+          routes: {
+            AppRoutes.splashRoute: (context) => const SplashScreen(),
+            AppRoutes.loginRoute: (context) => const LoginScreen(),
+            AppRoutes.dineInTablesRoute: (context) => DineInTablesScreen(),
+            AppRoutes.tableInOrder: (context) => TableInOrder(),
+            AppRoutes.confirmOrder: (context) => ConfirmOrderScreen(),
+            AppRoutes.selectService: (context) => SelectServiceScreen(),
           },
         ),
       ),

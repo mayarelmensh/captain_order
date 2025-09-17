@@ -1,6 +1,9 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import '../../../../../controller/cache/shared_preferences_utils.dart';
+import 'package:firebase_messaging/firebase_messaging.dart'; // 👈 مهم عشان نجيب الـ FCM Token
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../../../../controller/cache/shared_preferences_utils.dart';
 import '../../../../../controller/dio/dio_helper.dart';
 import '../../../../../controller/errors/failures.dart';
 import '../model/login_model.dart';
@@ -36,6 +39,8 @@ class LoginCubit extends Cubit<LoginState> {
       print("📦 Response Data: ${response.data}");
 
       if (response.statusCode == 200 && response.data['user'] != null) {
+
+        // Parse safely
         final loginResponse = LoginResponse.fromJson(response.data);
         // حفظ بيانات الكابتن
         captainName = loginResponse.captainOrder?.userName ?? userName;
@@ -50,6 +55,7 @@ class LoginCubit extends Cubit<LoginState> {
           key: 'token',
           value: response.data['token'],
         );
+         await SharedPreferenceUtils.saveData(key: 'token', value: response.data['token']);
         print("✅ Role from API: ${loginResponse.role}");
         print("✅ Role from User: ${loginResponse.captainOrder?.role}");
         print("✅ Final Role Used: ${loginResponse.role ?? loginResponse.captainOrder?.role}");
