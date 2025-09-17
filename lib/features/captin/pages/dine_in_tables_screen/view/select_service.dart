@@ -4,16 +4,23 @@ import 'package:food_2_go/core/utils/app_colors.dart';
 import 'package:food_2_go/core/utils/app_routes.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class SelectServiceScreen extends StatelessWidget {
+class SelectServiceScreen extends StatefulWidget {
   const SelectServiceScreen({super.key});
+
+  @override
+  State<SelectServiceScreen> createState() => _SelectServiceScreenState();
+}
+
+
+class _SelectServiceScreenState extends State<SelectServiceScreen> {
 
   @override
   Widget build(BuildContext context) {
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
 
-    final tableNumber = args?['tableNumber'] ?? '';
+    final tableNumber = args?['number'] ?? '';
     final area = args?['area'] ?? '';
-    final tableId = args?['tableId'] ?? 0;
+    final tableId = args?['id'] ?? 0;
 
     return Scaffold(
       body: Padding(
@@ -65,9 +72,9 @@ class SelectServiceScreen extends StatelessWidget {
                   context,
                   AppRoutes.tableInOrder,
                   arguments: {
-                    'tableNumber': tableNumber,
+                    'number': tableNumber, // بدل tableNumber
                     'area': area,
-                    'tableId': tableId,
+                    'id': tableId, // بدل tableId
                   },
                 );
               },

@@ -5,7 +5,8 @@ class EndPoints{
  /// Orders endpoints
  static const String orders = '/waiter/orders';
  static const String orderStatus = '/waiter/orders/status';
- static const String gitLocationsList  = '/captain/selection_lists';
+ static const String getLocationsList  = '/captain/selection_lists';
+ static const String getProductList  = '/captain/lists';
 
  /// Helper methods
  static String getOrderStatusUrl(int orderId) => '$orderStatus/$orderId';

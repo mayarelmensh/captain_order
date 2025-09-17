@@ -69,7 +69,9 @@ class _DineInTablesScreenContent extends StatelessWidget {
         child: BlocBuilder<DineInTablesCubit, DineInTablesState>(
           builder: (context, state) {
             if (state is DineInTablesLoading) {
-              return const Center(child: CircularProgressIndicator());
+              return  Center(child: CircularProgressIndicator(
+                color: AppColors.primary,
+              ));
             } else if (state is DineInTablesError) {
               return Center(
                 child: Column(
@@ -190,22 +192,33 @@ class _DineInTablesScreenContent extends StatelessWidget {
 
                         return GestureDetector(
                           onTap: () {
+                            final cubit = context.read<DineInTablesCubit>();
+
+                            final area = cubit.getLocationById(table.locationId);
+
+                            final tableData = {
+                              "id": table.id,
+                              "number": table.tableNumber,
+                              "area": area?.name ?? "Unknown Area",
+                            };
+
                             if (uiStatus == 'dining' ||
                                 uiStatus == 'reserved' ||
                                 uiStatus == 'paid') {
                               Navigator.pushNamed(
                                 context,
                                 AppRoutes.selectService,
-                                arguments: [table],
+                                arguments: tableData,
                               );
                             } else {
                               Navigator.pushNamed(
                                 context,
                                 AppRoutes.tableInOrder,
-                                arguments: [table],
+                                arguments: tableData,
                               );
                             }
                           },
+
                           child: Card(
                             elevation: 0,
                             shape: RoundedRectangleBorder(

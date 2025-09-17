@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:food_2_go/core/utils/app_colors.dart';
+import 'package:food_2_go/features/auth/login/logic/cubit/login_cubit.dart';
 import 'app_config.dart';
 import 'controller/cache/shared_preferences_utils.dart';
 import 'controller/dio/dio_helper.dart';
@@ -39,7 +40,8 @@ class MyApp extends StatelessWidget {
       splitScreenMode: true,
       child: MultiBlocProvider(
         providers: [
-         BlocProvider(create:(context) => DineInTablesCubit()..loadCafeData(),)
+         BlocProvider(create:(context) => DineInTablesCubit()..loadCafeData(),),
+         BlocProvider(create:(context) => LoginCubit())
         ],
         child: MaterialApp(
           theme: ThemeData(
