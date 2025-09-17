@@ -68,30 +68,7 @@ class MyApp extends StatelessWidget {
             AppRoutes.selectService: (context) =>  SelectServiceScreen(),
           },
         ),
-      child: MultiBlocProvider(
-        providers: [
-          BlocProvider(
-            create: (context) => OrderCubit(),
-          ),
-
-        ],
-        child: MaterialApp(
-          theme: ThemeData(
-            scaffoldBackgroundColor: AppColors.backGround,
-          ),
-          debugShowCheckedModeBanner: false,
-          title: config.appName,
-          initialRoute: AppRoutes.splashRoute,
-          routes: {
-            AppRoutes.splashRoute: (context) => const SplashScreen(),
-            AppRoutes.loginRoute: (context) => const LoginScreen(),
-            AppRoutes.dineInTablesRoute: (context) => DineInTablesScreen(),
-            AppRoutes.tableInOrder: (context) => TableInOrder(),
-            AppRoutes.confirmOrder: (context) => ConfirmOrderScreen(),
-            AppRoutes.selectService: (context) => SelectServiceScreen(),
-          },
-        ),
-      ),
+      )
     );
   }
 }
