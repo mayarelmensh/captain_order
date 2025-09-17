@@ -86,7 +86,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 // Logo and Welcome Text
                 Column(
                   children: [
-                    Image.asset('assets/images/Frame 4.png'),
+                    Container(
+                      width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          borderRadius: BorderRadius.only(
+                            bottomLeft: Radius.circular(70.r),
+                            bottomRight: Radius.circular(70.r),
+                          ),
+                        ),
+                        child: Image.asset('assets/images/Frame 4.png', )),
                     SizedBox(height: 8.h),
                     Text(
                       'Login',
