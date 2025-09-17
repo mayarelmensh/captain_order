@@ -62,8 +62,13 @@ class _DineInTablesScreenState extends State<DineInTablesScreen>
   }
 }
 
-class _DineInTablesScreenContent extends StatelessWidget {
-  _DineInTablesScreenContent();
+class _DineInTablesScreenContent extends StatefulWidget {
+  @override
+  _DineInTablesScreenContentState createState() => _DineInTablesScreenContentState();
+}
+
+class _DineInTablesScreenContentState extends State<_DineInTablesScreenContent> {
+  Set<int> updatingTables = {};
 
   // API statuses → UI statuses
   final Map<String, String> apiToUiStatus = {
@@ -85,20 +90,20 @@ class _DineInTablesScreenContent extends StatelessWidget {
 
   final Map<String, Color> statusColors = {
     'available': AppColors.white,
-    'paid': AppColors.green,
+    'paid': AppColors.lightGreen,
     'dining': AppColors.babyPink,
     'waiting': AppColors.blue,
     'reserved': AppColors.pink,
     'default': AppColors.borderColor,
   };
 
-  final Map<String, Color> statusCardColors = {
-    'available': const Color(0xFFF1F8E9),
-    'paid': const Color(0xFFF9FBE7),
-    'dining': const Color(0xFFFFF3E0),
-    'waiting': const Color(0xFFE3F2FD),
-    'reserved': const Color(0xFFF3E5F5),
-    'default': const Color(0xFFFAFAFA),
+  final Map<String, Color> statusTextColors = {
+    'available': AppColors.darkGrey,
+    'paid': AppColors.darkGrey,
+    'dining': AppColors.darkGrey,
+    'waiting': AppColors.white,
+    'reserved': AppColors.white,
+    'default': AppColors.black,
   };
 
   final Map<String, IconData> statusIcons = {
@@ -185,7 +190,6 @@ class _DineInTablesScreenContent extends StatelessWidget {
                       final statusKey = entry.key;
                       final statusLabel = entry.value;
                       final isSelected = selectedStatus == statusKey;
-
                       return AnimatedContainer(
                         duration: Duration(milliseconds: 200),
                         margin: EdgeInsets.symmetric(vertical: 6.h),
@@ -226,7 +230,7 @@ class _DineInTablesScreenContent extends StatelessWidget {
                                     child: Icon(
                                       statusIcons[statusKey] ?? Icons.help_outline,
                                       size: 16.sp,
-                                      color: Colors.white,
+                                      color: statusTextColors[statusKey] ?? Colors.white,
                                     ),
                                   ),
                                   SizedBox(width: 16.w),
@@ -327,7 +331,9 @@ class _DineInTablesScreenContent extends StatelessWidget {
       int tableId,
       String selectedStatus,
       ) async {
-
+    setState(() {
+      updatingTables.add(tableId);
+    });
 
     try {
       final apiStatus = uiToApiStatus[selectedStatus] ?? 'available';
@@ -338,523 +344,336 @@ class _DineInTablesScreenContent extends StatelessWidget {
         newStatus: apiStatus,
       );
 
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(
-                success ? Icons.check_circle : Icons.error,
-                color: Colors.white,
-                size: 20.sp,
-              ),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: Text(
-                  success
-                      ? 'Table status updated successfully'
-                      : 'Failed to update table status',
-                  style: GoogleFonts.poppins(fontSize: 14.sp),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: success ? Colors.green : Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.r),
-          ),
-        ),
-      );
-
       if (success) {
+        // Force refresh the cubit to update UI immediately
+        await cubit.refresh();
         print("✅ Table status updated successfully");
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Table status updated successfully'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
       } else {
         print("❌ Failed to update table status");
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to update table status'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
       }
     } catch (e) {
       print("⚠️ Exception during status update: $e");
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(
-                Icons.error,
-                color: Colors.white,
-                size: 20.sp,
-              ),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: Text(
-                  'Error updating table status',
-                  style: GoogleFonts.poppins(fontSize: 14.sp),
-                ),
-              ),
-            ],
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating table status'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 2),
           ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.r),
-          ),
-        ),
-      );
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          updatingTables.remove(tableId);
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(20.r),
-          child: BlocBuilder<DineInTablesCubit, DineInTablesState>(
-            builder: (context, state) {
-              if (state is DineInTablesLoading) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(32.r),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withOpacity(0.1),
-                              spreadRadius: 10,
-                              blurRadius: 20,
-                            ),
-                          ],
-                        ),
-                        child: CircularProgressIndicator(
-                          color: AppColors.primary,
-                          strokeWidth: 3,
-                        ),
-                      ),
-                      SizedBox(height: 24.h),
-                      Text(
-                        'Loading Tables...',
-                        style: GoogleFonts.poppins(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.subColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              } else if (state is DineInTablesError) {
-                return Center(
-                  child: Container(
-                    padding: EdgeInsets.all(24.r),
-                    margin: EdgeInsets.symmetric(horizontal: 20.w),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16.r),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.red.withOpacity(0.1),
-                          spreadRadius: 2,
-                          blurRadius: 10,
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 48.sp,
-                          color: Colors.red,
-                        ),
-                        SizedBox(height: 16.h),
-                        Text(
-                          'Error Loading Tables',
-                          style: GoogleFonts.poppins(
-                            fontSize: 18.sp,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.black,
-                          ),
-                        ),
-                        SizedBox(height: 8.h),
-                        Text(
-                          state.message,
-                          style: GoogleFonts.poppins(
-                            color: AppColors.subColor,
-                            fontSize: 14.sp,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        SizedBox(height: 20.h),
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            context.read<DineInTablesCubit>().refresh();
-                          },
-                          icon: Icon(Icons.refresh, size: 18.sp),
-                          label: Text(
-                            'Try Again',
-                            style: GoogleFonts.poppins(
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 24.w,
-                              vertical: 12.h,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12.r),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              } else if (state is DineInTablesLoaded) {
-                final tabs = context.read<DineInTablesCubit>().getTabs();
-                final filteredTables = context.read<DineInTablesCubit>().getFilteredTables();
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      body: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 15.r, vertical: 45.h),
+        child: BlocBuilder<DineInTablesCubit, DineInTablesState>(
+          builder: (context, state) {
+            if (state is DineInTablesLoading) {
+              return Center(child: CircularProgressIndicator(
+                color: AppColors.primary,
+              ));
+            } else if (state is DineInTablesError) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Header Section
-                    Container(
-                      padding: EdgeInsets.all(20.r),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16.r),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withOpacity(0.08),
-                            spreadRadius: 2,
-                            blurRadius: 10,
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: EdgeInsets.all(12.r),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12.r),
-                                ),
-                                child: Icon(
-                                  Icons.restaurant_menu,
-                                  size: 24.sp,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                              SizedBox(width: 16.w),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Dine-in Tables',
-                                      style: GoogleFonts.poppins(
-                                        color: AppColors.black,
-                                        fontSize: 28.sp,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                                    Text(
-                                      'Select an available table to start an order',
-                                      style: GoogleFonts.poppins(
-                                        color: AppColors.subColor,
-                                        fontWeight: FontWeight.w500,
-                                        fontSize: 14.sp,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                    Text(
+                      state.message,
+                      style: GoogleFonts.poppins(
+                        color: AppColors.black,
+                        fontSize: 16.sp,
                       ),
                     ),
-                    SizedBox(height: 20.h),
+                    SizedBox(height: 10.h),
+                    ElevatedButton(
+                      onPressed: () {
+                        context.read<DineInTablesCubit>().refresh();
+                      },
+                      child: Text(
+                        'Retry',
+                        style: GoogleFonts.poppins(fontSize: 14.sp),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            } else if (state is DineInTablesLoaded) {
+              final tabs = context.read<DineInTablesCubit>().getTabs();
+              final filteredTables =
+              context.read<DineInTablesCubit>().getFilteredTables();
 
-                    // Location Tabs
-                    Container(
-                      height: 50.h,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: tabs.length,
-                        itemBuilder: (context, index) {
-                          final isSelected = state.selectedLocationIndex == index;
-                          return GestureDetector(
-                            onTap: () {
-                              context.read<DineInTablesCubit>().selectLocation(index);
-                            },
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 300),
-                              margin: EdgeInsets.only(right: 12.w),
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 20.w,
-                                vertical: 12.h,
-                              ),
-                              decoration: BoxDecoration(
-                                gradient: isSelected
-                                    ? LinearGradient(
-                                  colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
-                                )
-                                    : null,
-                                color: isSelected ? null : Colors.white,
-                                borderRadius: BorderRadius.circular(25.r),
-                                border: Border.all(
-                                  color: isSelected ? Colors.transparent : Colors.grey.shade300,
-                                ),
-                                boxShadow: isSelected
-                                    ? [
-                                  BoxShadow(
-                                    color: AppColors.primary.withOpacity(0.3),
-                                    spreadRadius: 1,
-                                    blurRadius: 8,
-                                  ),
-                                ]
-                                    : null,
-                              ),
-                              child: Center(
-                                child: Text(
-                                  tabs[index],
-                                  style: GoogleFonts.poppins(
-                                    color: isSelected ? Colors.white : AppColors.subColor,
-                                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                    fontSize: 14.sp,
-                                  ),
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Dine-in Tables',
+                    style: GoogleFonts.poppins(
+                      color: AppColors.black,
+                      fontSize: 28.sp,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(height: 2.h),
+                  Text(
+                    'Select an available table to start an order',
+                    style: GoogleFonts.poppins(
+                      color: AppColors.subColor,
+                      fontWeight: FontWeight.w400,
+                      fontSize: 12.sp,
+                    ),
+                  ),
+                  SizedBox(height: 12.h),
+                  Container(
+                    height: 40.h,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: tabs.length,
+                      itemBuilder: (context, index) {
+                        final isSelected = state.selectedLocationIndex == index;
+                        return GestureDetector(
+                          onTap: () {
+                            context
+                                .read<DineInTablesCubit>()
+                                .selectLocation(index);
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            margin: EdgeInsets.only(right: 10.w),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 15.w,
+                              vertical: 8.h,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? AppColors.primary
+                                  : AppColors.borderColor,
+                              borderRadius: BorderRadius.circular(25.r),
+                            ),
+                            child: Center(
+                              child: Text(
+                                tabs[index],
+                                style: GoogleFonts.poppins(
+                                  color: isSelected
+                                      ? AppColors.white
+                                      : AppColors.subColor,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                  fontSize: 12.h,
                                 ),
                               ),
                             ),
-                          );
-                        },
-                      ),
+                          ),
+                        );
+                      },
                     ),
-                    SizedBox(height: 20.h),
+                  ),
+                  Expanded(
+                    child: GridView.builder(
+                      padding: EdgeInsets.symmetric(vertical: 10.h),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 1.w,
+                        mainAxisSpacing: 1.2.h,
+                        childAspectRatio: 1.h,
+                      ),
+                      itemCount: filteredTables.length,
+                      itemBuilder: (context, index) {
+                        final table = filteredTables[index];
+                        final uiStatus =
+                            apiToUiStatus[table.currentStatus] ?? 'default';
 
-                    // Tables Grid
-                    Expanded(
-                      child: GridView.builder(
-                        padding: EdgeInsets.only(bottom: 20.h),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 18.w,
-                          mainAxisSpacing: 18.h,
-                          childAspectRatio: 0.95, // Increased to fix overflow
-                        ),
-                        itemCount: filteredTables.length,
-                        itemBuilder: (context, index) {
-                          final table = filteredTables[index];
-                          final uiStatus = apiToUiStatus[table.currentStatus] ?? 'default';
-                          final statusColor = statusColors[uiStatus] ?? statusColors['default']!;
-                          final cardColor = statusCardColors[uiStatus] ?? statusCardColors['default']!;
+                        final statusColor =
+                            statusColors[uiStatus] ?? statusColors['default']!;
+                        final textColor = statusTextColors[uiStatus] ??
+                            statusTextColors['default']!;
 
-                          return GestureDetector(
-                            onTap: () {
-                              final cubit = context.read<DineInTablesCubit>();
-                              final area = cubit.getLocationById(table.locationId);
+                        return GestureDetector(
+                          onTap: () {
+                            final cubit = context.read<DineInTablesCubit>();
+                            final area = cubit.getLocationById(table.locationId);
 
-                              final tableData = {
-                                "id": table.id,
-                                "number": table.tableNumber,
-                                "area": area?.name ?? "Unknown Area",
-                              };
+                            final tableData = {
+                              "id": table.id,
+                              "number": table.tableNumber,
+                              "area": area?.name ?? "Unknown Area",
+                            };
 
-                              if (uiStatus == 'dining' || uiStatus == 'reserved' || uiStatus == 'paid') {
-                                Navigator.pushNamed(context, AppRoutes.selectService, arguments: tableData);
-                              } else {
-                                Navigator.pushNamed(context, AppRoutes.tableInOrder, arguments: tableData);
-                              }
-                            },
-                            onLongPress: () {
-                              _showStatusChangeDialog(context, table.id, table.currentStatus);
-                            },
-                            child: AnimatedContainer(
-                              duration: Duration(milliseconds: 200),
-                              child: Card(
-                                shadowColor: statusColor.withOpacity(0.1),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20.r),
-                                ),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(20.r),
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        cardColor,
-                                        cardColor.withOpacity(0.7),
-                                      ],
-                                    ),
-                                    border: Border.all(
-                                      color: statusColor.withOpacity(0.3),
-                                      width: 2,
-                                    ),
-                                  ),
-                                  padding: EdgeInsets.all(12.r), // Reduced padding
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min, // Ensure Column takes minimum space
+                            if (uiStatus == 'dining' ||
+                                uiStatus == 'reserved' ||
+                                uiStatus == 'paid') {
+                              Navigator.pushNamed(
+                                context,
+                                AppRoutes.selectService,
+                                arguments: tableData,
+                              );
+                            } else {
+                              Navigator.pushNamed(
+                                context,
+                                AppRoutes.tableInOrder,
+                                arguments: tableData,
+                              );
+                            }
+                          },
+                          onLongPress: () {
+                            _showStatusChangeDialog(context, table.id, table.currentStatus);
+                          },
+                          child: Card(
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15.r),
+                            ),
+                            color: statusColor,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(15.r),
+                                color: AppColors.white.withOpacity(0.7),
+                              ),
+                              padding: EdgeInsets.all(12.r),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      // Header with table number and edit button
+                                      Text(
+                                        table.tableNumber,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 30.sp,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.black,
+                                        ),
+                                      ),
+                                      SizedBox(width: 8.w),
+                                    ],
+                                  ),
+                                  SizedBox(height: 4.h),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
                                       Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
-                                          Expanded(
+                                          Container(
+                                            padding: EdgeInsets.symmetric(
+                                                vertical: 3.h, horizontal: 8.w),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.white.withOpacity(0.5),
+                                              borderRadius: BorderRadius.circular(30.r),
+                                            ),
                                             child: Text(
-                                              table.tableNumber,
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 18.sp,
-                                                fontWeight: FontWeight.w800,
-                                                color: AppColors.black,
+                                              uiStatus.capitalize(),
+                                              style: GoogleFonts.inter(
+                                                fontSize: 14.sp,
+                                                color: textColor,
                                               ),
-                                              overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
+                                          // Edit button next to status
                                           GestureDetector(
-                                            onTap: () {
+                                            onTap: updatingTables.contains(table.id) ? null : () {
                                               _showStatusChangeDialog(context, table.id, table.currentStatus);
                                             },
                                             child: Container(
                                               padding: EdgeInsets.all(6.r),
                                               decoration: BoxDecoration(
-                                                color: Colors.white.withOpacity(0.9),
-                                                borderRadius: BorderRadius.circular(8.r),
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: Colors.black.withOpacity(0.1),
-                                                    spreadRadius: 1,
-                                                    blurRadius: 4,
-                                                  ),
-                                                ],
+                                                color: Colors.white.withOpacity(0.8),
+                                                borderRadius: BorderRadius.circular(6.r),
                                               ),
-                                              child: Icon(
+                                              child: updatingTables.contains(table.id)
+                                                  ? SizedBox(
+                                                width: 14.sp,
+                                                height: 14.sp,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  color: AppColors.primary,
+                                                ),
+                                              )
+                                                  : Icon(
                                                 Icons.edit,
-                                                size: 18.sp,
-                                                color: AppColors.primary,
+                                                size: 14.sp,
+                                                color: AppColors.subColor,
                                               ),
                                             ),
                                           ),
                                         ],
                                       ),
-                                      Flexible(child: SizedBox(height: 8.h)), // Flexible spacing
-                                      // Status Badge
-                                      Container(
-                                        padding: EdgeInsets.symmetric(vertical: 6.h, horizontal: 10.w), // Reduced padding
-                                        decoration: BoxDecoration(
-                                          color: statusColor,
-                                          borderRadius: BorderRadius.circular(20.r),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: statusColor.withOpacity(0.3),
-                                              spreadRadius: 1,
-                                              blurRadius: 4,
-                                            ),
-                                          ],
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              statusIcons[uiStatus] ?? Icons.help_outline,
-                                              size: 14.sp,
-                                              color: Colors.white,
-                                            ),
-                                            SizedBox(width: 6.w),
-                                            Text(
-                                              statusLabelsEnglish[uiStatus] ?? uiStatus.capitalize(),
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 12.sp,
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Flexible(child: SizedBox(height: 8.h)), // Flexible spacing
-                                      // Table Info
+                                      SizedBox(height: 5.h,),
                                       Row(
                                         children: [
-                                          Container(
-                                            padding: EdgeInsets.all(6.r),
-                                            decoration: BoxDecoration(
-                                              color: Colors.white.withOpacity(0.8),
-                                              borderRadius: BorderRadius.circular(8.r),
-                                            ),
-                                            child: Icon(
-                                              Icons.people,
-                                              size: 16.sp,
-                                              color: AppColors.primary,
-                                            ),
-                                          ),
+                                          Image.asset('assets/images/seats.png'),
                                           SizedBox(width: 8.w),
                                           Text(
                                             '${table.capacity} seats',
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 13.sp,
+                                            style: GoogleFonts.inter(
+                                              fontSize: 12.sp,
                                               color: AppColors.darkGrey,
-                                              fontWeight: FontWeight.w500,
                                             ),
                                           ),
                                         ],
                                       ),
-                                      SizedBox(height: 6.h), // Reduced spacing
+                                      SizedBox(height: 4.h),
                                       Row(
                                         children: [
-                                          Container(
-                                            padding: EdgeInsets.all(6.r),
-                                            decoration: BoxDecoration(
-                                              color: Colors.white.withOpacity(0.8),
-                                              borderRadius: BorderRadius.circular(8.r),
-                                            ),
-                                            child: Icon(
-                                              Icons.table_restaurant,
-                                              size: 16.sp,
-                                              color: AppColors.primary,
-                                            ),
-                                          ),
+                                          Image.asset("assets/images/table_icon.png"),
                                           SizedBox(width: 8.w),
                                           Text(
-                                            'ID: ${table.id}',
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 13.sp,
+                                            'table ${table.id}',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 12.sp,
                                               color: AppColors.darkGrey,
-                                              fontWeight: FontWeight.w500,
                                             ),
                                           ),
                                         ],
                                       ),
                                     ],
                                   ),
-                                ),
+                                ],
                               ),
                             ),
-                          );
-                        },
-                      ),
+                          ),
+                        );
+                      },
                     ),
-                  ],
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
+                  ),
+                ],
+              );
+            }
+            return const SizedBox.shrink();
+          },
         ),
       ),
     );

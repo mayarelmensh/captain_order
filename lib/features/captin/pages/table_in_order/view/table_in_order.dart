@@ -24,23 +24,58 @@ class _TableInOrderState extends State<TableInOrder> {
   // Table data
   String? tableNumber;
   String? area;
+  int? tableId;
 
   // Order management variables
   List<Map<String, dynamic>> cartItems = [];
   double totalAmount = 0.0;
+  double totalTax = 0.0;
+  double totalDiscount = 0.0;
 
   TextEditingController searchController = TextEditingController();
   Timer? _debounce;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadTableData();
+    });
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _loadTableData();
+  }
+
+  void _loadTableData() {
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     if (args != null) {
-      final tableId = args['id'] as int;
       setState(() {
-        tableNumber = args['number'] as String;
-        area = args['area'] as String;
+        tableId = args['id'] as int?;
+        tableNumber = args['number'] as String?;
+        area = args['area'] as String?;
+
+        // فقط لو كان فيه products غير فارغة نحطهم
+        if (args['products'] != null && args['products'] is List) {
+          final existingProducts = List<Map<String, dynamic>>.from(args['products']);
+          if (existingProducts.isNotEmpty) {
+            cartItems.clear();
+            cartItems.addAll(existingProducts);
+            totalTax = args['total_tax']?.toDouble() ?? 0.0;
+            totalDiscount = args['total_discount']?.toDouble() ?? 0.0;
+            calculateTotal();
+            print("🟢 Loaded existing products: ${cartItems.length}");
+          } else {
+            // لو الـ products فارغة، نمسح كل البيانات
+            cartItems.clear();
+            totalTax = 0.0;
+            totalDiscount = 0.0;
+            totalAmount = 0.0;
+            print("🟡 Products list is empty, cleared all data");
+          }
+        }
       });
       print("🟢 TableInOrder args => id: $tableId, number: $tableNumber, area: $area");
     }
@@ -53,21 +88,66 @@ class _TableInOrderState extends State<TableInOrder> {
     super.dispose();
   }
 
-  // Calculate total amount
   void calculateTotal() {
-    totalAmount = 0.0;
-    for (var item in cartItems) {
-      totalAmount += item['totalPrice'];
-    }
+    totalAmount = cartItems.fold(0.0, (sum, item) => sum + (item['amount']?.toDouble() ?? 0.0));
+    setState(() {});
+    print("💰 Updated Total Amount: $totalAmount, Tax: $totalTax, Discount: $totalDiscount");
   }
 
-  // Debounce search input
   void _onSearchChanged(String query, BuildContext context) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {
       print("🔍 UI Search query sent: '$query'");
       context.read<ProductListCubit>().searchProducts(query);
     });
+  }
+
+  // تحديث method للانتقال للـ ConfirmOrderScreen
+  void _goToConfirmOrder() async {
+    if (cartItems.isEmpty) {
+      ToastMessage.toastMessage(
+        'Please add items to your order first',
+        AppColors.primary,
+        AppColors.white,
+      );
+      return;
+    }
+
+    // انتظار النتيجة من ConfirmOrderScreen
+    final result = await Navigator.pushNamed(
+      context,
+      AppRoutes.confirmOrder,
+      arguments: {
+        'table_id': tableId,
+        'amount': totalAmount,
+        'total_tax': totalTax,
+        'total_discount': totalDiscount,
+        'products': cartItems,
+      },
+    );
+
+    // تحديث البيانات بناء على النتيجة
+    if (result != null && result is Map<String, dynamic>) {
+      setState(() {
+        final products = result['products'] as List<dynamic>? ?? [];
+        if (products.isEmpty) {
+          // لو مفيش products نمسح كل حاجة
+          cartItems.clear();
+          totalAmount = 0.0;
+          totalTax = 0.0;
+          totalDiscount = 0.0;
+          print("🗑️ All orders cleared from ConfirmOrderScreen");
+        } else {
+          // لو فيه products نحدثهم
+          cartItems = List<Map<String, dynamic>>.from(products);
+          totalAmount = result['amount']?.toDouble() ?? 0.0;
+          totalTax = result['total_tax']?.toDouble() ?? 0.0;
+          totalDiscount = result['total_discount']?.toDouble() ?? 0.0;
+          print("🔄 Orders updated from ConfirmOrderScreen: ${cartItems.length} items");
+        }
+        calculateTotal();
+      });
+    }
   }
 
   @override
@@ -113,9 +193,7 @@ class _TableInOrderState extends State<TableInOrder> {
                               ),
                               TextSpan(text: " "),
                               TextSpan(
-                                text: tableNumber != null
-                                    ? "Table $tableNumber"
-                                    : "Table 1",
+                                text: tableNumber != null ? "Table $tableNumber" : "Table 1",
                                 style: GoogleFonts.poppins(
                                   fontSize: 12.sp,
                                   color: AppColors.subColor,
@@ -128,6 +206,34 @@ class _TableInOrderState extends State<TableInOrder> {
                       ),
                     ),
                     const Spacer(),
+                    // إضافة عرض عدد الأوردرات في السلة
+                    if (cartItems.isNotEmpty)
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20.r),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.shopping_cart,
+                              size: 16.sp,
+                              color: AppColors.primary,
+                            ),
+                            SizedBox(width: 4.w),
+                            Text(
+                              '${cartItems.length}',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
                 SizedBox(height: 20.h),
@@ -227,8 +333,6 @@ class _TableInOrderState extends State<TableInOrder> {
                   },
                 ),
                 SizedBox(height: 15.h),
-
-                // Categories Tabs - Dynamic from API
                 BlocBuilder<ProductListCubit, ProductListState>(
                   buildWhen: (previous, current) => previous != current,
                   builder: (context, state) {
@@ -262,7 +366,6 @@ class _TableInOrderState extends State<TableInOrder> {
                                 child: Center(
                                   child: Row(
                                     children: [
-                                      // Show category image or default icon
                                       if (index > 0 && state.productResponse.categories.isNotEmpty) ...[
                                         ClipOval(
                                           child: Image.network(
@@ -309,10 +412,7 @@ class _TableInOrderState extends State<TableInOrder> {
                     return Container(height: 32.h);
                   },
                 ),
-
                 const SizedBox(height: 20),
-
-                // Category Title
                 BlocBuilder<ProductListCubit, ProductListState>(
                   buildWhen: (previous, current) => previous != current,
                   builder: (context, state) {
@@ -336,8 +436,6 @@ class _TableInOrderState extends State<TableInOrder> {
                     return SizedBox.shrink();
                   },
                 ),
-
-                // Products Grid - Dynamic from API
                 Expanded(
                   child: BlocBuilder<ProductListCubit, ProductListState>(
                     buildWhen: (previous, current) => previous != current,
@@ -345,9 +443,7 @@ class _TableInOrderState extends State<TableInOrder> {
                       print("📋 Building products grid, state: ${state.runtimeType}");
                       if (state is ProductListLoading) {
                         print("📋 Showing loading indicator");
-                        return Center(child: CircularProgressIndicator(
-                          color: AppColors.primary,
-                        ));
+                        return Center(child: CircularProgressIndicator(color: AppColors.primary));
                       } else if (state is ProductListError) {
                         print("❌ ProductListError: ${state.message}");
                         return Center(
@@ -402,7 +498,7 @@ class _TableInOrderState extends State<TableInOrder> {
                                     searchController.clear();
                                     context.read<ProductListCubit>().resetProducts();
                                   },
-                                  child: Text('Clear Search',style: TextStyle(color: AppColors.primary),),
+                                  child: Text('Clear Search', style: TextStyle(color: AppColors.primary)),
                                 ),
                               ],
                             ),
@@ -421,10 +517,11 @@ class _TableInOrderState extends State<TableInOrder> {
                             final product = products[index];
                             print("📋 Building product card: ${product.name}");
                             return Card(
+                              color: AppColors.backGround,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16.r),
                               ),
-                              elevation: 0.7,
+                              elevation: 0.1,
                               child: Padding(
                                 padding: EdgeInsets.all(8.h),
                                 child: Column(
@@ -481,7 +578,7 @@ class _TableInOrderState extends State<TableInOrder> {
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
                                         Text(
-                                          "${product.price.toStringAsFixed(0)} \$",
+                                          "${product.price.toStringAsFixed(0)} ",
                                           style: GoogleFonts.poppins(
                                             fontSize: 18.sp,
                                             fontWeight: FontWeight.w700,
@@ -494,7 +591,7 @@ class _TableInOrderState extends State<TableInOrder> {
                                           child: IconButton(
                                             onPressed: () {
                                               print("➕ Opening dialog for ${product.name}");
-                                              _showProductDialog(context, product); // Pass parent context
+                                              _showProductDialog(context, product);
                                             },
                                             icon: Icon(
                                               Icons.add,
@@ -517,6 +614,65 @@ class _TableInOrderState extends State<TableInOrder> {
                     },
                   ),
                 ),
+
+                // إضافة شريط سفلي لإظهار الأوردرات لو موجودة
+                if (cartItems.isNotEmpty)
+                  Container(
+                    margin: EdgeInsets.only(top: 10.h),
+                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '${cartItems.length} item${cartItems.length > 1 ? 's' : ''} in order',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.black,
+                                ),
+                              ),
+                              SizedBox(height: 2.h),
+                              Text(
+                                'Total:${ totalAmount.toStringAsFixed(2)}',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: _goToConfirmOrder,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8.r),
+                            ),
+                            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                          ),
+                          child: Text(
+                            'View Order',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),
@@ -524,7 +680,6 @@ class _TableInOrderState extends State<TableInOrder> {
       ),
     );
   }
-
 
   void _showProductDialog(BuildContext parentContext, Product product) {
     int quantity = 1;
@@ -535,36 +690,32 @@ class _TableInOrderState extends State<TableInOrder> {
     Set<int> selectedExtras = {};
     TextEditingController noteController = TextEditingController();
 
-    // Initialize addon quantities
     for (var addon in product.addons) {
       addonQuantities[addon.id] = addon.quantityAdd;
     }
 
-    // Initialize variations
     for (var variation in product.variations) {
       if (variation.type == 'single') {
-        selectedSingleVariations[variation.id] = -1; // No default selection
+        selectedSingleVariations[variation.id] = -1;
       } else if (variation.type == 'multiple') {
         selectedMultipleVariations[variation.id] = [];
       }
     }
 
-    // Initialize extras
     if (product.allExtras != null) {
       for (var extra in product.allExtras!) {
-        selectedExtras.add(extra.id); // Pre-select all extras
+        selectedExtras.add(extra.id);
       }
     }
 
-    // Calculate tax, discount, and total price
     Map<String, double> calculateItemPrice() {
       double basePrice = product.price;
       double variationPrice = 0.0;
       double addonsPrice = 0.0;
+      double extrasPrice = 0.0;
       double totalTax = 0.0;
       double totalDiscount = 0.0;
 
-      // Add variation prices
       for (var variation in product.variations) {
         if (variation.type == 'single' && selectedSingleVariations[variation.id] != null && selectedSingleVariations[variation.id]! >= 0) {
           if (selectedSingleVariations[variation.id]! < variation.options.length) {
@@ -580,7 +731,6 @@ class _TableInOrderState extends State<TableInOrder> {
         }
       }
 
-      // Add addons price and tax
       for (var addon in product.addons) {
         int addonQty = addonQuantities[addon.id] ?? 0;
         double addonBasePrice = addon.price * addonQty;
@@ -590,23 +740,20 @@ class _TableInOrderState extends State<TableInOrder> {
         }
       }
 
-      // Add extras price (assuming extras may have tax in the future)
       if (product.allExtras != null) {
         for (var extra in product.allExtras!) {
           if (selectedExtras.contains(extra.id)) {
-            addonsPrice += extra.price;
-            // Add tax for extras if applicable (not in the provided response, but added for future-proofing)
+            extrasPrice += extra.price;
           }
         }
       }
 
-      // Calculate discount
       if (product.discount != null && product.discount!.amount != null) {
         totalDiscount = basePrice * (product.discount!.amount / 100) * quantity;
       }
 
-      double totalPrice = (basePrice + variationPrice + addonsPrice) * quantity;
-      print("💰 Calculating price: Base: $basePrice, Variations: $variationPrice, Addons: $addonsPrice, Quantity: $quantity, Total: $totalPrice, Tax: $totalTax, Discount: $totalDiscount");
+      double totalPrice = (basePrice + variationPrice + addonsPrice + extrasPrice) * quantity;
+      print("💰 Price Calculation: Base: $basePrice, Var: $variationPrice, Addons: $addonsPrice, Extras: $extrasPrice, Qty: $quantity, Total: $totalPrice, Tax: $totalTax, Disc: $totalDiscount");
 
       return {
         'totalPrice': totalPrice,
@@ -616,627 +763,279 @@ class _TableInOrderState extends State<TableInOrder> {
     }
 
     showDialog(
-        context: parentContext,
-        builder: (context) {
-          return StatefulBuilder(
-            builder: (context, setDialogState) {
-              // Debug: Print product details
-              print("📦 Product Dialog: ${product.name ?? 'Unnamed Product'}");
-              print("📋 Variations: ${product.variations.length}");
-              for (var variation in product.variations) {
-                print("  - ${variation.name} (Type: ${variation
-                    .type}, Max: ${variation.max}, Min: ${variation
-                    .min}, Required: ${variation.required})");
-                for (var option in variation.options) {
-                  print("    - Option: ${option.name}, Price: ${option.price}");
-                }
+      context: parentContext,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            print("📦 Product Dialog: ${product.name ?? 'Unnamed Product'}");
+            print("📋 Variations: ${product.variations.length}");
+            for (var variation in product.variations) {
+              print("  - ${variation.name} (Type: ${variation.type}, Max: ${variation.max}, Min: ${variation.min}, Required: ${variation.required})");
+              for (var option in variation.options) {
+                print("    - Option: ${option.name}, Price: ${option.price}");
               }
-              print("📋 Addons: ${product.addons.length}");
-              for (var addon in product.addons) {
-                print("  - Addon: ${addon.name}, Price: ${addon
-                    .price}, Quantity: ${addonQuantities[addon
-                    .id]}, Tax: ${addon.tax?.amount}");
+            }
+            print("📋 Addons: ${product.addons.length}");
+            for (var addon in product.addons) {
+              print("  - Addon: ${addon.name}, Price: ${addon.price}, Quantity: ${addonQuantities[addon.id]}, Tax: ${addon.tax?.amount}");
+            }
+            print("📋 Excludes: ${product.excludes.length}");
+            for (var exclude in product.excludes) {
+              print("  - Exclude: ${exclude.name}, ID: ${exclude.id}");
+            }
+            print("📋 Extras: ${product.allExtras?.length ?? 0}");
+            if (product.allExtras != null) {
+              for (var extra in product.allExtras!) {
+                print("  - Extra: ${extra.name}, ID: ${extra.id}, Price: ${extra.price}");
               }
-              print("📋 Excludes: ${product.excludes.length}");
-              for (var exclude in product.excludes) {
-                print("  - Exclude: ${exclude.name}, ID: ${exclude.id}");
-              }
-              print("📋 Extras: ${product.allExtras?.length ?? 0}");
-              if (product.allExtras != null) {
-                for (var extra in product.allExtras!) {
-                  print(
-                      "  - Extra: ${extra.name}, ID: ${extra.id}, Price: ${extra
-                          .price}");
-                }
-              }
-              print("📋 Discount: ${product.discount?.amount ?? 'None'}");
+            }
+            print("📋 Discount: ${product.discount?.amount ?? 'None'}");
 
-              return Dialog(
-                backgroundColor: AppColors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25.r),
-                ),
-                insetPadding: EdgeInsets.symmetric(horizontal: 5.w),
-                clipBehavior: Clip.antiAlias,
-                child: SizedBox(
-                  width: MediaQuery
-                      .of(context)
-                      .size
-                      .width * 0.9,
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.vertical(top: Radius
-                              .circular(25.r)),
-                          child: Image.network(
-                            product.imageLink,
-                            height: 200.h,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              print("🖼️ Dialog image error for ${product.name ??
-                                  'Unnamed Product'}: $error");
-                              return Image.asset(
-                                "assets/images/placeholder.png",
-                                height: 200.h,
-                                width: double.infinity,
-                                fit: BoxFit.cover,
-                              );
-                            },
-                          ),
+            return Dialog(
+              backgroundColor: AppColors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(25.r),
+              ),
+              insetPadding: EdgeInsets.symmetric(horizontal: 5.w),
+              clipBehavior: Clip.antiAlias,
+              child: SizedBox(
+                width: MediaQuery.of(context).size.width * 0.9,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(25.r)),
+                        child: Image.network(
+                          product.imageLink,
+                          height: 200.h,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            print("🖼️ Dialog image error for ${product.name ?? 'Unnamed Product'}: $error");
+                            return Image.asset(
+                              "assets/images/placeholder.png",
+                              height: 200.h,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            );
+                          },
                         ),
-                        Padding(
-                          padding: EdgeInsets.all(12.h),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment
-                                    .spaceBetween,
-                                children: [
-                                  Text(
-                                    "$quantity",
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 16.sp,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: Center(
-                                      child: Text(
-                                        product.name ?? 'Unnamed Product',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 20.sp,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  Row(
-                                    children: [
-                                      GestureDetector(
-                                        onTap: () {
-                                          print(
-                                              "➖ Decrement quantity: $quantity");
-                                          setDialogState(() {
-                                            if (quantity > 1) quantity--;
-                                          });
-                                        },
-                                        child: Container(
-                                          width: 32.w,
-                                          height: 32.h,
-                                          decoration: BoxDecoration(
-                                            color: AppColors.borderColor,
-                                            borderRadius: BorderRadius.circular(
-                                                6.r),
-                                          ),
-                                          child: Icon(
-                                            Icons.remove,
-                                            size: 16.sp,
-                                            color: AppColors.black,
-                                          ),
-                                        ),
-                                      ),
-                                      SizedBox(width: 8.w),
-                                      GestureDetector(
-                                        onTap: () {
-                                          print(
-                                              "➕ Increment quantity: $quantity");
-                                          setDialogState(() {
-                                            quantity++;
-                                          });
-                                        },
-                                        child: Container(
-                                          width: 32.w,
-                                          height: 32.h,
-                                          decoration: BoxDecoration(
-                                            color: AppColors.primary,
-                                            borderRadius: BorderRadius.circular(
-                                                6.r),
-                                          ),
-                                          child: Icon(
-                                            Icons.add,
-                                            size: 16.sp,
-                                            color: AppColors.white,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 6.h),
-                              Text(
-                                "\$${calculateItemPrice()['totalPrice']!
-                                    .toStringAsFixed(2)}",
-                                style: GoogleFonts.poppins(
-                                  fontSize: 18.sp,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                              SizedBox(height: 12.h),
-                              Text(
-                                'Description:',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 16.sp,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.black,
-                                ),
-                              ),
-                              SizedBox(height: 4.h),
-                              Text(
-                                product.description ??
-                                    'No description available',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14.sp,
-                                  color: AppColors.subColor,
-                                ),
-                              ),
-                              SizedBox(height: 12.h),
-
-                              // Show variations if available
-                              if (product.variations.isNotEmpty) ...[
-                                for (var variation in product.variations) ...[
-                                  Text(
-                                    variation.name,
-                                    style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 16.sp,
-                                      color: AppColors.black,
-                                    ),
-                                  ),
-                                  if (variation.required == 1 ||
-                                      (variation.min != null &&
-                                          variation.min! > 0)) ...[
-                                    Text(
-                                      'Required: Select at least ${variation
-                                          .min ?? 1} option${(variation.min ??
-                                          1) > 1 ? 's' : ''}',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 12.sp,
-                                        color: AppColors.red,
-                                      ),
-                                    ),
-                                  ],
-                                  if (variation.max != null &&
-                                      variation.max! > 0) ...[
-                                    Text(
-                                      'Maximum: ${variation
-                                          .max} option${variation.max! > 1
-                                          ? 's'
-                                          : ''}',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 12.sp,
-                                        color: AppColors.subColor,
-                                      ),
-                                    ),
-                                  ],
-                                  SizedBox(height: 8.h),
-                                  if (variation.type == 'single') ...[
-                                    Wrap(
-                                      key: ValueKey(
-                                          'variation_${variation.id}'),
-                                      spacing: 8.w,
-                                      runSpacing: 8.h,
-                                      children: variation.options
-                                          .asMap()
-                                          .entries
-                                          .map((entry) {
-                                        int optionIndex = entry.key;
-                                        var option = entry.value;
-                                        final isSelected = selectedSingleVariations[variation
-                                            .id] == optionIndex;
-                                        return GestureDetector(
-                                          onTap: () {
-                                            print(
-                                                "📍 Single variation tapped: ${option
-                                                    .name}, Index: $optionIndex, IsSelected: $isSelected");
-                                            setDialogState(() {
-                                              selectedSingleVariations[variation
-                                                  .id] =
-                                              isSelected ? -1 : optionIndex;
-                                            });
-                                          },
-                                          child: Container(
-                                            padding: EdgeInsets.symmetric(
-                                                horizontal: 12.w,
-                                                vertical: 6.h),
-                                            decoration: BoxDecoration(
-                                              color: isSelected ? AppColors
-                                                  .primary : AppColors
-                                                  .borderColor,
-                                              borderRadius: BorderRadius
-                                                  .circular(6.r),
-                                              border: Border.all(
-                                                color: isSelected ? AppColors
-                                                    .yellow : Colors
-                                                    .transparent,
-                                                width: 2,
-                                              ),
-                                            ),
-                                            child: Text(
-                                              "${option.name} (+\$${option.price
-                                                  .toStringAsFixed(0)})",
-                                              style: TextStyle(
-                                                fontSize: 12.sp,
-                                                color: isSelected ? AppColors
-                                                    .white : AppColors.black,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      }).toList(),
-                                    ),
-                                  ] else
-                                    if (variation.type == 'multiple') ...[
-                                      Column(
-                                        key: ValueKey(
-                                            'variation_${variation.id}'),
-                                        crossAxisAlignment: CrossAxisAlignment
-                                            .start,
-                                        children: variation.options
-                                            .asMap()
-                                            .entries
-                                            .map((entry) {
-                                          int optionIndex = entry.key;
-                                          var option = entry.value;
-                                          final isSelected = (selectedMultipleVariations[variation
-                                              .id] ?? []).contains(optionIndex);
-                                          return CheckboxListTile(
-                                            key: ValueKey('option_${variation
-                                                .id}_$optionIndex'),
-                                            title: Text(
-                                              "${option.name} (+\$${option.price
-                                                  .toStringAsFixed(0)})",
-                                              style: GoogleFonts.poppins(
-                                                  fontSize: 12.sp),
-                                            ),
-                                            value: isSelected,
-                                            onChanged: (bool? value) {
-                                              print(
-                                                  "📍 Multiple variation ${option
-                                                      .name}: $value");
-                                              setDialogState(() {
-                                                var selected = selectedMultipleVariations[variation
-                                                    .id] ?? [];
-                                                if (value == true) {
-                                                  if (selected.length <
-                                                      (variation.max ?? 999)) {
-                                                    selected.add(optionIndex);
-                                                  } else {
-                                                    print(
-                                                        "⚠️ Max selections reached for ${variation
-                                                            .name}: ${variation
-                                                            .max}");
-                                                    ToastMessage.toastMessage(
-                                                        'Maximum quantity reached for ${variation
-                                                            .name} (${variation
-                                                            .max})',
-                                                        AppColors.primary,
-                                                        AppColors.white);
-                                                  }
-                                                } else {
-                                                  selected.remove(optionIndex);
-                                                }
-                                                selectedMultipleVariations[variation
-                                                    .id] = selected;
-                                              });
-                                            },
-                                          );
-                                        }).toList(),
-                                      ),
-                                    ],
-                                  SizedBox(height: 12.h),
-                                ],
-                              ],
-
-                              // Show addons
-                              if (product.addons.isNotEmpty) ...[
+                      ),
+                      Padding(
+                        padding: EdgeInsets.all(12.h),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
                                 Text(
-                                  'Add ons',
+                                  "$quantity",
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16.sp,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Center(
+                                    child: Text(
+                                      product.name ?? 'Unnamed Product',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 20.sp,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Row(
+                                  children: [
+                                    GestureDetector(
+                                      onTap: () {
+                                        print("➖ Decrement quantity: $quantity");
+                                        setDialogState(() {
+                                          if (quantity > 1) quantity--;
+                                        });
+                                      },
+                                      child: Container(
+                                        width: 32.w,
+                                        height: 32.h,
+                                        decoration: BoxDecoration(
+                                          color: AppColors.borderColor,
+                                          borderRadius: BorderRadius.circular(6.r),
+                                        ),
+                                        child: Icon(
+                                          Icons.remove,
+                                          size: 16.sp,
+                                          color: AppColors.black,
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(width: 8.w),
+                                    GestureDetector(
+                                      onTap: () {
+                                        print("➕ Increment quantity: $quantity");
+                                        setDialogState(() {
+                                          quantity++;
+                                        });
+                                      },
+                                      child: Container(
+                                        width: 32.w,
+                                        height: 32.h,
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary,
+                                          borderRadius: BorderRadius.circular(6.r),
+                                        ),
+                                        child: Icon(
+                                          Icons.add,
+                                          size: 16.sp,
+                                          color: AppColors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 6.h),
+                            Text(
+                              "${calculateItemPrice()['totalPrice']!.toStringAsFixed(2)}",
+                              style: GoogleFonts.poppins(
+                                fontSize: 18.sp,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            SizedBox(height: 12.h),
+                            Text(
+                              'Description:',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.black,
+                              ),
+                            ),
+                            SizedBox(height: 4.h),
+                            Text(
+                              product.description ?? 'No description available',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14.sp,
+                                color: AppColors.subColor,
+                              ),
+                            ),
+                            SizedBox(height: 12.h),
+                            if (product.variations.isNotEmpty) ...[
+                              for (var variation in product.variations) ...[
+                                Text(
+                                  variation.name,
                                   style: GoogleFonts.poppins(
                                     fontWeight: FontWeight.w600,
                                     fontSize: 16.sp,
                                     color: AppColors.black,
                                   ),
                                 ),
+                                if (variation.required == 1 || (variation.min != null && variation.min! > 0)) ...[
+                                  Text(
+                                    'Required: Select at least ${variation.min ?? 1} option${(variation.min ?? 1) > 1 ? 's' : ''}',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12.sp,
+                                      color: AppColors.red,
+                                    ),
+                                  ),
+                                ],
+                                if (variation.max != null && variation.max! > 0) ...[
+                                  Text(
+                                    'Maximum: ${variation.max} option${variation.max! > 1 ? 's' : ''}',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12.sp,
+                                      color: AppColors.subColor,
+                                    ),
+                                  ),
+                                ],
                                 SizedBox(height: 8.h),
-                                ...product.addons.map(
-                                      (addon) =>
-                                      Padding(
-                                        key: ValueKey('addon_${addon.id}'),
-                                        padding: EdgeInsets.symmetric(
-                                            vertical: 4.h),
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment
-                                              .spaceBetween,
-                                          children: [
-                                            Expanded(
-                                              child: Row(
-                                                children: [
-                                                  Container(
-                                                    width: 40.w,
-                                                    height: 40.h,
-                                                    decoration: BoxDecoration(
-                                                      color: AppColors
-                                                          .borderColor,
-                                                      borderRadius: BorderRadius
-                                                          .circular(8.r),
-                                                    ),
-                                                    child: Icon(Icons.fastfood,
-                                                        size: 20.sp),
-                                                  ),
-                                                  SizedBox(width: 8.w),
-                                                  Expanded(
-                                                    child: Column(
-                                                      crossAxisAlignment: CrossAxisAlignment
-                                                          .start,
-                                                      children: [
-                                                        Text(
-                                                          addon.name,
-                                                          style: GoogleFonts
-                                                              .poppins(
-                                                            fontSize: 14.sp,
-                                                            fontWeight: FontWeight
-                                                                .w600,
-                                                            color: AppColors
-                                                                .black,
-                                                          ),
-                                                        ),
-                                                        Text(
-                                                          "\$${addon.price
-                                                              .toStringAsFixed(
-                                                              0)}",
-                                                          style: GoogleFonts
-                                                              .poppins(
-                                                            fontSize: 12.sp,
-                                                            color: AppColors
-                                                                .subColor,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
+                                if (variation.type == 'single') ...[
+                                  Wrap(
+                                    key: ValueKey('variation_${variation.id}'),
+                                    spacing: 8.w,
+                                    runSpacing: 8.h,
+                                    children: variation.options.asMap().entries.map((entry) {
+                                      int optionIndex = entry.key;
+                                      var option = entry.value;
+                                      final isSelected = selectedSingleVariations[variation.id] == optionIndex;
+                                      return GestureDetector(
+                                        onTap: () {
+                                          print("📍 Single variation tapped: ${option.name}, Index: $optionIndex, IsSelected: $isSelected");
+                                          setDialogState(() {
+                                            selectedSingleVariations[variation.id] = isSelected ? -1 : optionIndex;
+                                          });
+                                        },
+                                        child: Container(
+                                          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                                          decoration: BoxDecoration(
+                                            color: isSelected ? AppColors.primary : AppColors.borderColor,
+                                            borderRadius: BorderRadius.circular(6.r),
+                                            border: Border.all(
+                                              color: isSelected ? AppColors.yellow : Colors.transparent,
+                                              width: 2,
                                             ),
-                                            Container(
-                                              decoration: BoxDecoration(
-                                                border: Border.all(
-                                                    color: AppColors
-                                                        .borderColor),
-                                                borderRadius: BorderRadius
-                                                    .circular(10.r),
-                                                color: AppColors.white,
-                                              ),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  GestureDetector(
-                                                    onTap: () {
-                                                      print(
-                                                          "➖ Decrement addon ${addon
-                                                              .name}: ${addonQuantities[addon
-                                                              .id]}");
-                                                      setDialogState(() {
-                                                        if ((addonQuantities[addon
-                                                            .id] ?? 0) > 0) {
-                                                          addonQuantities[addon
-                                                              .id] =
-                                                              (addonQuantities[addon
-                                                                  .id] ?? 0) -
-                                                                  1;
-                                                        }
-                                                      });
-                                                    },
-                                                    child: Container(
-                                                      width: 32.w,
-                                                      height: 32.h,
-                                                      decoration: BoxDecoration(
-                                                        color: AppColors
-                                                            .borderColor,
-                                                        borderRadius: BorderRadius
-                                                            .circular(4.r),
-                                                      ),
-                                                      child: Icon(
-                                                        Icons.remove,
-                                                        size: 16.sp,
-                                                        color: AppColors.black,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  SizedBox(width: 8.w),
-                                                  Text(
-                                                    "${addonQuantities[addon
-                                                        .id] ?? 0}",
-                                                    style: GoogleFonts.poppins(
-                                                      fontSize: 14.sp,
-                                                      fontWeight: FontWeight
-                                                          .w600,
-                                                      color: AppColors.black,
-                                                    ),
-                                                  ),
-                                                  SizedBox(width: 8.w),
-                                                  GestureDetector(
-                                                    onTap: () {
-                                                      print(
-                                                          "➕ Increment addon ${addon
-                                                              .name}: ${addonQuantities[addon
-                                                              .id]}");
-                                                      setDialogState(() {
-                                                        int currentQuantity = addonQuantities[addon
-                                                            .id] ?? 0;
-                                                        int maxAllowed = addon
-                                                            .quantityAdd == 0
-                                                            ? 1
-                                                            : 999;
-                                                        if (currentQuantity <
-                                                            maxAllowed) {
-                                                          addonQuantities[addon
-                                                              .id] =
-                                                              currentQuantity +
-                                                                  1;
-                                                        } else {
-                                                          print(
-                                                              "⚠️ Max quantity reached for ${addon
-                                                                  .name}: $maxAllowed");
-                                                          ToastMessage
-                                                              .toastMessage(
-                                                              'Maximum quantity reached for ${addon
-                                                                  .name} ($maxAllowed)',
-                                                              AppColors.primary,
-                                                              AppColors.white);
-                                                        }
-                                                      });
-                                                    },
-                                                    child: Container(
-                                                      width: 32.w,
-                                                      height: 32.h,
-                                                      decoration: BoxDecoration(
-                                                        color: addonQuantities[addon
-                                                            .id] != null &&
-                                                            addonQuantities[addon
-                                                                .id]! >= (addon
-                                                                .quantityAdd ==
-                                                                0 ? 1 : 999)
-                                                            ? AppColors
-                                                            .borderColor
-                                                            .withOpacity(0.5)
-                                                            : AppColors
-                                                            .borderColor,
-                                                        borderRadius: BorderRadius
-                                                            .circular(4.r),
-                                                      ),
-                                                      child: Icon(
-                                                        Icons.add,
-                                                        size: 16.sp,
-                                                        color: addonQuantities[addon
-                                                            .id] != null &&
-                                                            addonQuantities[addon
-                                                                .id]! >= (addon
-                                                                .quantityAdd ==
-                                                                0 ? 1 : 999)
-                                                            ? AppColors.subColor
-                                                            : AppColors.black,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
+                                          ),
+                                          child: Text(
+                                            "${option.name} (+${option.price.toStringAsFixed(0)})",
+                                            style: TextStyle(
+                                              fontSize: 12.sp,
+                                              color: isSelected ? AppColors.white : AppColors.black,
+                                              fontWeight: FontWeight.bold,
                                             ),
-                                          ],
+                                          ),
                                         ),
-                                      ),
-                                ),
-                              ],
-
-                              // Show excludes
-                              if (product.excludes.isNotEmpty) ...[
-                                SizedBox(height: 12.h),
-                                Text(
-                                  'Excludes',
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 16.sp,
-                                    color: AppColors.black,
+                                      );
+                                    }).toList(),
                                   ),
-                                ),
-                                Column(
-                                  children: product.excludes.map((exclude) {
-                                    final isSelected = selectedExcludes
-                                        .contains(exclude.id);
-                                    return CheckboxListTile(
-                                      key: ValueKey('exclude_${exclude.id}'),
-                                      title: Text(
-                                        exclude.name,
-                                        style: GoogleFonts.poppins(
-                                            fontSize: 14.sp),
-                                      ),
-                                      value: isSelected,
-                                      onChanged: (bool? value) {
-                                        print("📍 Exclude ${exclude
-                                            .name}: $value");
-                                        setDialogState(() {
-                                          if (value == true) {
-                                            selectedExcludes.add(exclude.id);
-                                          } else {
-                                            selectedExcludes.remove(exclude.id);
-                                          }
-                                        });
-                                      },
-                                    );
-                                  }).toList(),
-                                ),
-                              ],
-
-                              // Show extras
-                              if (product.allExtras != null &&
-                                  product.allExtras!.isNotEmpty) ...[
-                                SizedBox(height: 12.h),
-                                Text(
-                                  'Extras',
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 16.sp,
-                                    color: AppColors.black,
+                                ] else if (variation.type == 'multiple') ...[
+                                  Column(
+                                    key: ValueKey('variation_${variation.id}'),
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: variation.options.asMap().entries.map((entry) {
+                                      int optionIndex = entry.key;
+                                      var option = entry.value;
+                                      final isSelected = (selectedMultipleVariations[variation.id] ?? []).contains(optionIndex);
+                                      return CheckboxListTile(
+                                        key: ValueKey('option_${variation.id}_$optionIndex'),
+                                        title: Text(
+                                          "${option.name} (+${option.price.toStringAsFixed(0)})",
+                                          style: GoogleFonts.poppins(fontSize: 12.sp),
+                                        ),
+                                        value: isSelected,
+                                        onChanged: (bool? value) {
+                                          print("📍 Multiple variation ${option.name}: $value");
+                                          setDialogState(() {
+                                            var selected = selectedMultipleVariations[variation.id] ?? [];
+                                            if (value == true) {
+                                              if (selected.length < (variation.max ?? 999)) {
+                                                selected.add(optionIndex);
+                                              } else {
+                                                print("⚠️ Max selections reached for ${variation.name}: ${variation.max}");
+                                                ToastMessage.toastMessage(
+                                                    'Maximum quantity reached for ${variation.name} (${variation.max})',
+                                                    AppColors.primary,
+                                                    AppColors.white);
+                                              }
+                                            } else {
+                                              selected.remove(optionIndex);
+                                            }
+                                            selectedMultipleVariations[variation.id] = selected;
+                                          });
+                                        },
+                                      );
+                                    }).toList(),
                                   ),
-                                ),
-                                Column(
-                                  children: product.allExtras!.map((extra) {
-                                    final isSelected = selectedExtras.contains(
-                                        extra.id);
-                                    return CheckboxListTile(
-                                      key: ValueKey('extra_${extra.id}'),
-                                      title: Text(
-                                        "${extra.name} (+\$${extra.price
-                                            .toStringAsFixed(0)})",
-                                        style: GoogleFonts.poppins(
-                                            fontSize: 14.sp),
-                                      ),
-                                      value: isSelected,
-                                      onChanged: (bool? value) {
-                                        print("📍 Extra ${extra.name}: $value");
-                                        setDialogState(() {
-                                          if (value == true) {
-                                            selectedExtras.add(extra.id);
-                                          } else {
-                                            selectedExtras.remove(extra.id);
-                                          }
-                                        });
-                                      },
-                                    );
-                                  }).toList(),
-                                ),
+                                ],
+                                SizedBox(height: 12.h),
                               ],
-
-                              // Show notes
-                              SizedBox(height: 12.h),
+                            ],
+                            if (product.addons.isNotEmpty) ...[
                               Text(
-                                'Notes',
+                                'Add ons',
                                 style: GoogleFonts.poppins(
                                   fontWeight: FontWeight.w600,
                                   fontSize: 16.sp,
@@ -1244,182 +1043,320 @@ class _TableInOrderState extends State<TableInOrder> {
                                 ),
                               ),
                               SizedBox(height: 8.h),
-                              TextFormField(
-                                controller: noteController,
-                                decoration: InputDecoration(
-                                  hintText: "Add any special requests...",
-                                  hintStyle: GoogleFonts.poppins(
-                                    fontSize: 14.sp,
-                                    color: AppColors.subColor,
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12.r),
-                                  ),
-                                ),
-                                maxLines: 3,
-                              ),
-
-                              SizedBox(height: 30.h),
-                              CustomElevatedButton(
-                                text: "Add To Order",
-                                onPressed: () {
-                                  // Validate required and min requirements for variations
-                                  bool isValid = true;
-                                  for (var variation in product.variations) {
-                                    if (variation.required == 1 ||
-                                        (variation.min != null &&
-                                            variation.min! > 0)) {
-                                      if (variation.type == 'single' &&
-                                          selectedSingleVariations[variation
-                                              .id] == -1) {
-                                        isValid = false;
-                                        print("⚠️ Validation failed: ${variation
-                                            .name} is required");
-                                        ToastMessage.toastMessage("Please select an option for ${variation
-                                            .name}", AppColors.red,
-                                            AppColors.white);
-                                      } else if (variation.type == 'multiple') {
-                                        final selectedCount = (selectedMultipleVariations[variation
-                                            .id] ?? []).length;
-                                        final minRequired = variation.min ?? 1;
-                                        if (selectedCount < minRequired) {
-                                          isValid = false;
-                                          print(
-                                              "⚠️ Validation failed: Select at least $minRequired option${minRequired >
-                                                  1 ? 's' : ''} for ${variation
-                                                  .name}");
-                                          ScaffoldMessenger.of(parentContext)
-                                              .showSnackBar(
-                                            SnackBar(
-                                              content: Text(
-                                                  "Please select at least $minRequired option${minRequired >
-                                                      1
-                                                      ? 's'
-                                                      : ''} for ${variation
-                                                      .name}"),
-                                              behavior: SnackBarBehavior
-                                                  .floating,
+                              ...product.addons.map((addon) => Padding(
+                                key: ValueKey('addon_${addon.id}'),
+                                padding: EdgeInsets.symmetric(vertical: 4.h),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 40.w,
+                                            height: 40.h,
+                                            decoration: BoxDecoration(
+                                              color: AppColors.borderColor,
+                                              borderRadius: BorderRadius.circular(8.r),
                                             ),
-                                          );
+                                            child: Icon(Icons.fastfood, size: 20.sp),
+                                          ),
+                                          SizedBox(width: 8.w),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  addon.name,
+                                                  style: GoogleFonts.poppins(
+                                                    fontSize: 14.sp,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: AppColors.black,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  "${addon.price.toStringAsFixed(0)}",
+                                                  style: GoogleFonts.poppins(
+                                                    fontSize: 12.sp,
+                                                    color: AppColors.subColor,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        border: Border.all(color: AppColors.borderColor),
+                                        borderRadius: BorderRadius.circular(10.r),
+                                        color: AppColors.white,
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          GestureDetector(
+                                            onTap: () {
+                                              print("➖ Decrement addon ${addon.name}: ${addonQuantities[addon.id]}");
+                                              setDialogState(() {
+                                                if ((addonQuantities[addon.id] ?? 0) > 0) {
+                                                  addonQuantities[addon.id] = (addonQuantities[addon.id] ?? 0) - 1;
+                                                }
+                                              });
+                                            },
+                                            child: Container(
+                                              width: 32.w,
+                                              height: 32.h,
+                                              decoration: BoxDecoration(
+                                                color: AppColors.borderColor,
+                                                borderRadius: BorderRadius.circular(4.r),
+                                              ),
+                                              child: Icon(
+                                                Icons.remove,
+                                                size: 16.sp,
+                                                color: AppColors.black,
+                                              ),
+                                            ),
+                                          ),
+                                          SizedBox(width: 8.w),
+                                          Text(
+                                            "${addonQuantities[addon.id] ?? 0}",
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 14.sp,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppColors.black,
+                                            ),
+                                          ),
+                                          SizedBox(width: 8.w),
+                                          GestureDetector(
+                                            onTap: () {
+                                              print("➕ Increment addon ${addon.name}: ${addonQuantities[addon.id]}");
+                                              setDialogState(() {
+                                                int currentQuantity = addonQuantities[addon.id] ?? 0;
+                                                int maxAllowed = addon.quantityAdd == 0 ? 1 : 999;
+                                                if (currentQuantity < maxAllowed) {
+                                                  addonQuantities[addon.id] = currentQuantity + 1;
+                                                } else {
+                                                  print("⚠️ Max quantity reached for ${addon.name}: $maxAllowed");
+                                                  ToastMessage.toastMessage(
+                                                      'Maximum quantity reached for ${addon.name} ($maxAllowed)',
+                                                      AppColors.primary,
+                                                      AppColors.white);
+                                                }
+                                              });
+                                            },
+                                            child: Container(
+                                              width: 32.w,
+                                              height: 32.h,
+                                              decoration: BoxDecoration(
+                                                color: addonQuantities[addon.id] != null &&
+                                                    addonQuantities[addon.id]! >= (addon.quantityAdd == 0 ? 1 : 999)
+                                                    ? AppColors.borderColor.withOpacity(0.5)
+                                                    : AppColors.borderColor,
+                                                borderRadius: BorderRadius.circular(4.r),
+                                              ),
+                                              child: Icon(
+                                                Icons.add,
+                                                size: 16.sp,
+                                                color: addonQuantities[addon.id] != null &&
+                                                    addonQuantities[addon.id]! >= (addon.quantityAdd == 0 ? 1 : 999)
+                                                    ? AppColors.subColor
+                                                    : AppColors.black,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )),
+                            ],
+                            if (product.excludes.isNotEmpty) ...[
+                              SizedBox(height: 12.h),
+                              Text(
+                                'Excludes',
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 16.sp,
+                                  color: AppColors.black,
+                                ),
+                              ),
+                              Column(
+                                children: product.excludes.map((exclude) {
+                                  final isSelected = selectedExcludes.contains(exclude.id);
+                                  return CheckboxListTile(
+                                    key: ValueKey('exclude_${exclude.id}'),
+                                    title: Text(
+                                      exclude.name,
+                                      style: GoogleFonts.poppins(fontSize: 14.sp),
+                                    ),
+                                    value: isSelected,
+                                    onChanged: (bool? value) {
+                                      print("📍 Exclude ${exclude.name}: $value");
+                                      setDialogState(() {
+                                        if (value == true) {
+                                          selectedExcludes.add(exclude.id);
+                                        } else {
+                                          selectedExcludes.remove(exclude.id);
                                         }
+                                      });
+                                    },
+                                  );
+                                }).toList(),
+                              ),
+                            ],
+                            if (product.allExtras != null && product.allExtras!.isNotEmpty) ...[
+                              SizedBox(height: 12.h),
+                              Text(
+                                'Extras',
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 16.sp,
+                                  color: AppColors.black,
+                                ),
+                              ),
+                              Column(
+                                children: product.allExtras!.map((extra) {
+                                  final isSelected = selectedExtras.contains(extra.id);
+                                  return CheckboxListTile(
+                                    key: ValueKey('extra_${extra.id}'),
+                                    title: Text(
+                                      "${extra.name} (+${extra.price.toStringAsFixed(0)})",
+                                      style: GoogleFonts.poppins(fontSize: 14.sp),
+                                    ),
+                                    value: isSelected,
+                                    onChanged: (bool? value) {
+                                      print("📍 Extra ${extra.name}: $value");
+                                      setDialogState(() {
+                                        if (value == true) {
+                                          selectedExtras.add(extra.id);
+                                        } else {
+                                          selectedExtras.remove(extra.id);
+                                        }
+                                      });
+                                    },
+                                  );
+                                }).toList(),
+                              ),
+                            ],
+                            SizedBox(height: 12.h),
+                            Text(
+                              'Notes',
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 16.sp,
+                                color: AppColors.black,
+                              ),
+                            ),
+                            SizedBox(height: 8.h),
+                            TextFormField(
+                              controller: noteController,
+                              decoration: InputDecoration(
+                                hintText: "Add any special requests...",
+                                hintStyle: GoogleFonts.poppins(
+                                  fontSize: 14.sp,
+                                  color: AppColors.subColor,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12.r),
+                                ),
+                              ),
+                              maxLines: 3,
+                            ),
+                            SizedBox(height: 30.h),
+                            CustomElevatedButton(
+                              text: "Add To Order",
+                              onPressed: () {
+                                bool isValid = true;
+                                for (var variation in product.variations) {
+                                  if (variation.required == 1 || (variation.min != null && variation.min! > 0)) {
+                                    if (variation.type == 'single' && selectedSingleVariations[variation.id] == -1) {
+                                      isValid = false;
+                                      print("⚠️ Validation failed: ${variation.name} is required");
+                                      ToastMessage.toastMessage("Please select an option for ${variation.name}", AppColors.red, AppColors.white);
+                                    } else if (variation.type == 'multiple') {
+                                      final selectedCount = (selectedMultipleVariations[variation.id] ?? []).length;
+                                      final minRequired = variation.min ?? 1;
+                                      if (selectedCount < minRequired) {
+                                        isValid = false;
+                                        print("⚠️ Validation failed: Select at least $minRequired option${minRequired > 1 ? 's' : ''} for ${variation.name}");
+                                        ScaffoldMessenger.of(parentContext).showSnackBar(
+                                          SnackBar(
+                                            content: Text("Please select at least $minRequired option${minRequired > 1 ? 's' : ''} for ${variation.name}"),
+                                            behavior: SnackBarBehavior.floating,
+                                          ),
+                                        );
                                       }
                                     }
                                   }
+                                }
 
-                                  if (isValid) {
-                                    // Calculate prices
-                                    final prices = calculateItemPrice();
+                                if (isValid) {
+                                  final prices = calculateItemPrice();
+                                  Map<String, dynamic> newProduct = {
+                                    'product_id': product.id,
+                                    'count': quantity,
+                                    'note': noteController.text.isNotEmpty ? noteController.text : null,
+                                    'amount': prices['totalPrice'] ?? 0.0,
+                                    'addons': product.addons
+                                        .asMap()
+                                        .entries
+                                        .where((entry) => (addonQuantities[entry.value.id] ?? 0) > 0)
+                                        .map((entry) => {
+                                      'addon_id': entry.value.id,
+                                      'count': addonQuantities[entry.value.id],
+                                    })
+                                        .toList(),
+                                    'exclude_id': selectedExcludes.toList(),
+                                    'extra_id': selectedExtras.toList(),
+                                    'variation': product.variations.map((variation) => {
+                                      'variation_id': variation.id,
+                                      'option_id': variation.type == 'single'
+                                          ? (selectedSingleVariations[variation.id] != null && selectedSingleVariations[variation.id]! >= 0
+                                          ? [variation.options[selectedSingleVariations[variation.id]!].id]
+                                          : [])
+                                          : (selectedMultipleVariations[variation.id] ?? []).map((index) => variation.options[index].id).toList(),
+                                    }).toList(),
+                                  };
 
-                                    // Create new order details
-                                    Map<String, dynamic> newOrder = {
-                                      'amount': prices['totalPrice'],
-                                      'total_tax': prices['totalTax'],
-                                      'total_discount': prices['totalDiscount'],
-                                      'table_id': ModalRoute
-                                          .of(parentContext)
-                                          ?.settings
-                                          .arguments != null
-                                          ? (ModalRoute
-                                          .of(parentContext)!
-                                          .settings
-                                          .arguments as Map)['id']
-                                          : null,
-                                      'products': [
-                                        {
-                                          'product_id': product.id,
-                                          'count': quantity,
-                                          'note': noteController.text.isNotEmpty
-                                              ? noteController.text
-                                              : null,
-                                          'addons': product.addons
-                                              .asMap()
-                                              .entries
-                                              .where((entry) =>
-                                          (addonQuantities[entry.value.id] ??
-                                              0) > 0)
-                                              .map((entry) =>
-                                          {
-                                            'addon_id': entry.value.id,
-                                            'count': addonQuantities[entry.value
-                                                .id],
-                                          })
-                                              .toList(),
-                                          'exclude_id': selectedExcludes
-                                              .toList(),
-                                          'extra_id': selectedExtras.toList(),
-                                          'variation': product.variations.map((
-                                              variation) =>
-                                          {
-                                            'variation_id': variation.id,
-                                            'option_id': variation.type ==
-                                                'single'
-                                                ? (selectedSingleVariations[variation
-                                                .id] != null &&
-                                                selectedSingleVariations[variation
-                                                    .id]! >= 0
-                                                ? [
-                                              variation
-                                                  .options[selectedSingleVariations[variation
-                                                  .id]!].id
-                                            ]
-                                                : [])
-                                                : (selectedMultipleVariations[variation
-                                                .id] ?? [])
-                                                .map((index) =>
-                                            variation.options[index].id)
-                                                .toList(),
-                                          }).toList(),
-                                        }
-                                      ],
-                                    };
+                                  setState(() {
+                                    cartItems.add(newProduct);
+                                    totalTax += prices['totalTax'] ?? 0.0;
+                                    totalDiscount += prices['totalDiscount'] ?? 0.0;
+                                    calculateTotal();
+                                  });
 
-                                    // Check if there are existing orders
-                                    final existingArgs = ModalRoute
-                                        .of(parentContext)
-                                        ?.settings
-                                        .arguments as Map<String, dynamic>?;
-                                    List<Map<String,
-                                        dynamic>> existingProducts = [];
-                                    if (existingArgs != null &&
-                                        existingArgs['products'] != null) {
-                                      existingProducts =
-                                      List<Map<String, dynamic>>.from(
-                                          existingArgs['products']);
-                                    }
+                                  Navigator.of(context).pop();
 
-                                    // Combine new order with existing orders
-                                    existingProducts.addAll(
-                                        newOrder['products']);
-                                    newOrder['products'] = existingProducts;
+                                  ToastMessage.toastMessage(
+                                    "${product.name} added to order!",
+                                    Colors.green,
+                                    AppColors.white,
+                                  );
 
-                                    print(
-                                        "📦 Combined Order Details: $newOrder");
-                                    Navigator.pushNamed(
-                                      context,
-                                      AppRoutes.confirmOrder,
-                                      arguments: newOrder,
-                                    );
-                                  }
-                                },
-                                backgroundColor: AppColors.primary,
-                                textStyle: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 16.sp,
-                                  color: AppColors.white,
-                                ),
+                                  print("📦 Product added to cart: ${newProduct['product_id']}, Amount: ${newProduct['amount']}");
+                                }
+                              },
+                              backgroundColor: AppColors.primary,
+                              textStyle: GoogleFonts.poppins(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16.sp,
+                                color: AppColors.white,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-              );
-            },
-          );
-        }
+              ),
+            );
+          },
+        );
+      },
     );
   }
-  }
-
+}
