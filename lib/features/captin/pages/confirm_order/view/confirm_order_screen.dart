@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:food_2_go/core/utils/app_colors.dart';
 import 'package:food_2_go/core/utils/flutter_toast.dart';
-import 'package:food_2_go/custom_widgets/custom_elevated_button.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:food_2_go/controller/dio/dio_helper.dart';
 import 'package:food_2_go/controller/cache/shared_preferences_utils.dart';
@@ -38,6 +37,7 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
       if (args != null) {
         setState(() {
           tableId = args['table_id']?.toInt() ?? 0;
+          // Initialize from args, but will recalculate from items
           totalTax = args['total_tax']?.toDouble() ?? 0.0;
           totalDiscount = args['total_discount']?.toDouble() ?? 0.0;
           total = args['amount']?.toDouble() ?? 0.0;
@@ -53,6 +53,8 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
                 'product_id': product['product_id']?.toInt() ?? 0,
                 'count': product['count']?.toInt() ?? 1,
                 'amount': product['amount']?.toDouble() ?? 0.0,
+                'item_tax': product['item_tax']?.toDouble() ?? 0.0,
+                'item_discount': product['item_discount']?.toDouble() ?? 0.0,
                 'note': product['note']?.toString() ?? '',
                 'title': _getProductName(product['product_id']),
                 'image': _getProductImage(product['product_id']),
@@ -298,22 +300,30 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
     setState(() {
       final currentCount = orderItems[index]['count'] ?? 1;
       final unitPrice = (orderItems[index]['amount']?.toDouble() ?? 0.0) / currentCount;
+      final unitTax = (orderItems[index]['item_tax']?.toDouble() ?? 0.0) / currentCount;
+      final unitDiscount = (orderItems[index]['item_discount']?.toDouble() ?? 0.0) / currentCount;
 
       if (increase) {
-        orderItems[index]['count'] = currentCount + 1;
-        orderItems[index]['amount'] = unitPrice * (currentCount + 1);
+        final newCount = currentCount + 1;
+        orderItems[index]['count'] = newCount;
+        orderItems[index]['amount'] = unitPrice * newCount;
+        orderItems[index]['item_tax'] = unitTax * newCount;
+        orderItems[index]['item_discount'] = unitDiscount * newCount;
 
         // تحديث الـ original product
-        orderItems[index]['original_product']['count'] = currentCount + 1;
-        orderItems[index]['original_product']['amount'] = unitPrice * (currentCount + 1);
+        orderItems[index]['original_product']['count'] = newCount;
+        orderItems[index]['original_product']['amount'] = unitPrice * newCount;
       } else {
         if (currentCount > 1) {
-          orderItems[index]['count'] = currentCount - 1;
-          orderItems[index]['amount'] = unitPrice * (currentCount - 1);
+          final newCount = currentCount - 1;
+          orderItems[index]['count'] = newCount;
+          orderItems[index]['amount'] = unitPrice * newCount;
+          orderItems[index]['item_tax'] = unitTax * newCount;
+          orderItems[index]['item_discount'] = unitDiscount * newCount;
 
           // تحديث الـ original product
-          orderItems[index]['original_product']['count'] = currentCount - 1;
-          orderItems[index]['original_product']['amount'] = unitPrice * (currentCount - 1);
+          orderItems[index]['original_product']['count'] = newCount;
+          orderItems[index]['original_product']['amount'] = unitPrice * newCount;
         }
       }
       calculateTotals();
@@ -322,6 +332,8 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
 
   void removeItem(int index) {
     setState(() {
+      totalTax -= orderItems[index]['item_tax']?.toDouble() ?? 0.0;
+      totalDiscount -= orderItems[index]['item_discount']?.toDouble() ?? 0.0;
       orderItems.removeAt(index);
       calculateTotals();
     });
@@ -330,6 +342,8 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
   void calculateTotals() {
     setState(() {
       subtotal = orderItems.fold(0.0, (sum, item) => sum + (item['amount']?.toDouble() ?? 0.0));
+      totalTax = orderItems.fold(0.0, (sum, item) => sum + (item['item_tax']?.toDouble() ?? 0.0));
+      totalDiscount = orderItems.fold(0.0, (sum, item) => sum + (item['item_discount']?.toDouble() ?? 0.0));
       serviceCharge = subtotal * 0.15; // 15% service charge
       total = subtotal + serviceCharge + totalTax - totalDiscount;
       print('💰 Subtotal: $subtotal, Service Charge: $serviceCharge, Tax: $totalTax, Discount: $totalDiscount, Total: $total');
@@ -493,7 +507,8 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
                         // Item Image
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8.r),
-                          child: item['image'].startsWith('http')
+                          child: item['image'] != null && item['image'].toString().isNotEmpty
+                              ? (item['image'].startsWith('http')
                               ? Image.network(
                             item['image'],
                             width: 60.w,
@@ -506,38 +521,57 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
                                 height: 60.h,
                                 child: Center(
                                   child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppColors.primary,
                                     value: loadingProgress.expectedTotalBytes != null
                                         ? loadingProgress.cumulativeBytesLoaded / (loadingProgress.expectedTotalBytes ?? 1)
                                         : null,
-                                    color: AppColors.primary,
                                   ),
                                 ),
                               );
                             },
                             errorBuilder: (context, error, stackTrace) {
-                              print('🖼️ Image load error for ${item['title'] ?? 'Unknown Product'}: $error');
-                              return Image.asset(
-                                'assets/images/placeholder.png',
+                              print('🖼️ Image error for ${item['title']}: $error');
+                              return SizedBox(
                                 width: 60.w,
                                 height: 60.h,
-                                fit: BoxFit.cover,
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
                               );
                             },
                           )
                               : Image.asset(
-                            item['image'] ?? 'assets/images/placeholder.png',
+                            item['image'],
                             width: 60.w,
                             height: 60.h,
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) {
-                              print('🖼️ Asset image load error for ${item['title'] ?? 'Unknown Product'}: $error');
-                              return Image.asset(
-                                'assets/images/placeholder.png',
+                              print('🖼️ Asset image error for ${item['title']}: $error');
+                              return SizedBox(
                                 width: 60.w,
                                 height: 60.h,
-                                fit: BoxFit.cover,
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
                               );
                             },
+                          ))
+                              : SizedBox(
+                            width: 60.w,
+                            height: 60.h,
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.primary,
+                              ),
+                            ),
                           ),
                         ),
                         SizedBox(width: 12.w),
@@ -673,10 +707,9 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
 
           // Add More Items Button
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 35.h),
             child: GestureDetector(
               onTap: () {
-                // إرجاع البيانات المحدثة إلى TableInOrder
                 if (orderItems.isNotEmpty) {
                   Navigator.pop(context, {
                     'products': orderItems.map((item) => item['original_product']).toList(),
@@ -762,7 +795,7 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        "Service Charge (15%)",
+                        "Service Charge ",
                         style: GoogleFonts.poppins(
                           fontSize: 14.sp,
                           color: AppColors.subColor,

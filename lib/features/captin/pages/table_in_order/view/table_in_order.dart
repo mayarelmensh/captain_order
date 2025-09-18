@@ -57,7 +57,6 @@ class _TableInOrderState extends State<TableInOrder> {
         tableNumber = args['number'] as String?;
         area = args['area'] as String?;
 
-        // فقط لو كان فيه products غير فارغة نحطهم
         if (args['products'] != null && args['products'] is List) {
           final existingProducts = List<Map<String, dynamic>>.from(args['products']);
           if (existingProducts.isNotEmpty) {
@@ -68,7 +67,6 @@ class _TableInOrderState extends State<TableInOrder> {
             calculateTotal();
             print("🟢 Loaded existing products: ${cartItems.length}");
           } else {
-            // لو الـ products فارغة، نمسح كل البيانات
             cartItems.clear();
             totalTax = 0.0;
             totalDiscount = 0.0;
@@ -102,7 +100,6 @@ class _TableInOrderState extends State<TableInOrder> {
     });
   }
 
-  // تحديث method للانتقال للـ ConfirmOrderScreen
   void _goToConfirmOrder() async {
     if (cartItems.isEmpty) {
       ToastMessage.toastMessage(
@@ -113,7 +110,6 @@ class _TableInOrderState extends State<TableInOrder> {
       return;
     }
 
-    // انتظار النتيجة من ConfirmOrderScreen
     final result = await Navigator.pushNamed(
       context,
       AppRoutes.confirmOrder,
@@ -126,19 +122,16 @@ class _TableInOrderState extends State<TableInOrder> {
       },
     );
 
-    // تحديث البيانات بناء على النتيجة
     if (result != null && result is Map<String, dynamic>) {
       setState(() {
         final products = result['products'] as List<dynamic>? ?? [];
         if (products.isEmpty) {
-          // لو مفيش products نمسح كل حاجة
           cartItems.clear();
           totalAmount = 0.0;
           totalTax = 0.0;
           totalDiscount = 0.0;
           print("🗑️ All orders cleared from ConfirmOrderScreen");
         } else {
-          // لو فيه products نحدثهم
           cartItems = List<Map<String, dynamic>>.from(products);
           totalAmount = result['amount']?.toDouble() ?? 0.0;
           totalTax = result['total_tax']?.toDouble() ?? 0.0;
@@ -206,7 +199,6 @@ class _TableInOrderState extends State<TableInOrder> {
                       ),
                     ),
                     const Spacer(),
-                    // إضافة عرض عدد الأوردرات في السلة
                     if (cartItems.isNotEmpty)
                       Container(
                         padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
@@ -249,6 +241,36 @@ class _TableInOrderState extends State<TableInOrder> {
                               backgroundImage: loginCubit.captainImageLink != null
                                   ? NetworkImage(loginCubit.captainImageLink!)
                                   : AssetImage('assets/images/default_avatar.png') as ImageProvider,
+                              child: loginCubit.captainImageLink != null
+                                  ? ClipOval(
+                                child: Image.network(
+                                  loginCubit.captainImageLink!,
+                                  fit: BoxFit.cover,
+                                  width: 40.w,
+                                  height: 40.h,
+                                  loadingBuilder: (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return Center(
+                                      child: CircularProgressIndicator(
+                                        color: AppColors.primary,
+                                        value: loadingProgress.expectedTotalBytes != null
+                                            ? loadingProgress.cumulativeBytesLoaded / (loadingProgress.expectedTotalBytes ?? 1)
+                                            : null,
+                                      ),
+                                    );
+                                  },
+                                  errorBuilder: (context, error, stackTrace) {
+                                    print("🖼️ Captain image error: $error");
+                                    return Image.asset(
+                                      'assets/images/default_avatar.png',
+                                      fit: BoxFit.cover,
+                                      width: 40.w,
+                                      height: 40.h,
+                                    );
+                                  },
+                                ),
+                              )
+                                  : null,
                             ),
                             SizedBox(width: 10.w),
                             Text.rich(
@@ -373,6 +395,17 @@ class _TableInOrderState extends State<TableInOrder> {
                                             width: 20.w,
                                             height: 20.h,
                                             fit: BoxFit.cover,
+                                            loadingBuilder: (context, child, loadingProgress) {
+                                              if (loadingProgress == null) return child;
+                                              return Center(
+                                                child: CircularProgressIndicator(
+                                                  color: AppColors.primary,
+                                                  value: loadingProgress.expectedTotalBytes != null
+                                                      ? loadingProgress.cumulativeBytesLoaded / (loadingProgress.expectedTotalBytes ?? 1)
+                                                      : null,
+                                                ),
+                                              );
+                                            },
                                             errorBuilder: (context, error, stackTrace) {
                                               print("🖼️ Category image error for ${tabs[index]}: $error");
                                               return Image.asset(
@@ -519,6 +552,9 @@ class _TableInOrderState extends State<TableInOrder> {
                             return Card(
                               color: AppColors.backGround,
                               shape: RoundedRectangleBorder(
+                                side: BorderSide(
+                                  color: AppColors.borderColor,
+                                ),
                                 borderRadius: BorderRadius.circular(16.r),
                               ),
                               elevation: 0.1,
@@ -534,6 +570,17 @@ class _TableInOrderState extends State<TableInOrder> {
                                         height: 100.h,
                                         width: double.infinity,
                                         fit: BoxFit.cover,
+                                        loadingBuilder: (context, child, loadingProgress) {
+                                          if (loadingProgress == null) return child;
+                                          return Center(
+                                            child: CircularProgressIndicator(
+                                              color: AppColors.primary,
+                                              value: loadingProgress.expectedTotalBytes != null
+                                                  ? loadingProgress.cumulativeBytesLoaded / (loadingProgress.expectedTotalBytes ?? 1)
+                                                  : null,
+                                            ),
+                                          );
+                                        },
                                         errorBuilder: (context, error, stackTrace) {
                                           print("🖼️ Image error for ${product.name}: $error");
                                           return Image.asset(
@@ -578,7 +625,7 @@ class _TableInOrderState extends State<TableInOrder> {
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
                                         Text(
-                                          "${product.price.toStringAsFixed(0)} ",
+                                          "${product.price.toStringAsFixed(0)} \$ ",
                                           style: GoogleFonts.poppins(
                                             fontSize: 18.sp,
                                             fontWeight: FontWeight.w700,
@@ -614,8 +661,6 @@ class _TableInOrderState extends State<TableInOrder> {
                     },
                   ),
                 ),
-
-                // إضافة شريط سفلي لإظهار الأوردرات لو موجودة
                 if (cartItems.isNotEmpty)
                   Container(
                     margin: EdgeInsets.only(top: 10.h),
@@ -642,7 +687,7 @@ class _TableInOrderState extends State<TableInOrder> {
                               ),
                               SizedBox(height: 2.h),
                               Text(
-                                'Total:${ totalAmount.toStringAsFixed(2)}',
+                                'Total: ${totalAmount.toStringAsFixed(2)}',
                                 style: GoogleFonts.poppins(
                                   fontSize: 16.sp,
                                   fontWeight: FontWeight.w700,
@@ -709,15 +754,21 @@ class _TableInOrderState extends State<TableInOrder> {
     }
 
     Map<String, double> calculateItemPrice() {
-      double basePrice = product.price;
+      double basePrice = product.priceAfterDiscount ?? product.price;
+      double baseTax = 0.0;
+      if (product.priceAfterTax != null) {
+        baseTax = product.priceAfterTax! - (product.priceAfterDiscount ?? product.price);
+      }
       double variationPrice = 0.0;
       double addonsPrice = 0.0;
+      double addonsTax = 0.0;
       double extrasPrice = 0.0;
-      double totalTax = 0.0;
       double totalDiscount = 0.0;
 
       for (var variation in product.variations) {
-        if (variation.type == 'single' && selectedSingleVariations[variation.id] != null && selectedSingleVariations[variation.id]! >= 0) {
+        if (variation.type == 'single' &&
+            selectedSingleVariations[variation.id] != null &&
+            selectedSingleVariations[variation.id]! >= 0) {
           if (selectedSingleVariations[variation.id]! < variation.options.length) {
             variationPrice += variation.options[selectedSingleVariations[variation.id]!].price;
           }
@@ -736,7 +787,7 @@ class _TableInOrderState extends State<TableInOrder> {
         double addonBasePrice = addon.price * addonQty;
         addonsPrice += addonBasePrice;
         if (addon.tax != null && addon.tax!.amount != null) {
-          totalTax += addonBasePrice * (addon.tax!.amount / 100);
+          addonsTax += addonBasePrice * (addon.tax!.amount / 100);
         }
       }
 
@@ -748,16 +799,17 @@ class _TableInOrderState extends State<TableInOrder> {
         }
       }
 
-      if (product.discount != null && product.discount!.amount != null) {
-        totalDiscount = basePrice * (product.discount!.amount / 100) * quantity;
-      }
+      double unitPriceBeforeTax = basePrice + variationPrice + addonsPrice + extrasPrice;
+      double unitTax = baseTax + addonsTax;
+      double totalPrice = unitPriceBeforeTax * quantity;
+      double totalTaxAmount = unitTax * quantity;
 
-      double totalPrice = (basePrice + variationPrice + addonsPrice + extrasPrice) * quantity;
-      print("💰 Price Calculation: Base: $basePrice, Var: $variationPrice, Addons: $addonsPrice, Extras: $extrasPrice, Qty: $quantity, Total: $totalPrice, Tax: $totalTax, Disc: $totalDiscount");
+      print(
+          "💰 Price Calculation: Base: $basePrice, Var: $variationPrice, Addons: $addonsPrice, Extras: $extrasPrice, Qty: $quantity, Total: $totalPrice, Tax: $totalTaxAmount, Disc: $totalDiscount");
 
       return {
         'totalPrice': totalPrice,
-        'totalTax': totalTax,
+        'totalTax': totalTaxAmount,
         'totalDiscount': totalDiscount,
       };
     }
@@ -770,14 +822,16 @@ class _TableInOrderState extends State<TableInOrder> {
             print("📦 Product Dialog: ${product.name ?? 'Unnamed Product'}");
             print("📋 Variations: ${product.variations.length}");
             for (var variation in product.variations) {
-              print("  - ${variation.name} (Type: ${variation.type}, Max: ${variation.max}, Min: ${variation.min}, Required: ${variation.required})");
+              print(
+                  "  - ${variation.name} (Type: ${variation.type}, Max: ${variation.max}, Min: ${variation.min}, Required: ${variation.required})");
               for (var option in variation.options) {
                 print("    - Option: ${option.name}, Price: ${option.price}");
               }
             }
             print("📋 Addons: ${product.addons.length}");
             for (var addon in product.addons) {
-              print("  - Addon: ${addon.name}, Price: ${addon.price}, Quantity: ${addonQuantities[addon.id]}, Tax: ${addon.tax?.amount}");
+              print(
+                  "  - Addon: ${addon.name}, Price: ${addon.price}, Quantity: ${addonQuantities[addon.id]}, Tax: ${addon.tax?.amount}");
             }
             print("📋 Excludes: ${product.excludes.length}");
             for (var exclude in product.excludes) {
@@ -811,6 +865,18 @@ class _TableInOrderState extends State<TableInOrder> {
                           height: 200.h,
                           width: double.infinity,
                           fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Center(
+                              child: CircularProgressIndicator(
+                                color: AppColors.primary,
+                                value: loadingProgress.expectedTotalBytes != null
+                                    ? loadingProgress.cumulativeBytesLoaded /
+                                    (loadingProgress.expectedTotalBytes ?? 1)
+                                    : null,
+                              ),
+                            );
+                          },
                           errorBuilder: (context, error, stackTrace) {
                             print("🖼️ Dialog image error for ${product.name ?? 'Unnamed Product'}: $error");
                             return Image.asset(
@@ -828,6 +894,7 @@ class _TableInOrderState extends State<TableInOrder> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
@@ -837,6 +904,7 @@ class _TableInOrderState extends State<TableInOrder> {
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
+                                SizedBox(width: 5.w),
                                 Expanded(
                                   child: Center(
                                     child: Text(
@@ -964,7 +1032,8 @@ class _TableInOrderState extends State<TableInOrder> {
                                       final isSelected = selectedSingleVariations[variation.id] == optionIndex;
                                       return GestureDetector(
                                         onTap: () {
-                                          print("📍 Single variation tapped: ${option.name}, Index: $optionIndex, IsSelected: $isSelected");
+                                          print(
+                                              "📍 Single variation tapped: ${option.name}, Index: $optionIndex, IsSelected: $isSelected");
                                           setDialogState(() {
                                             selectedSingleVariations[variation.id] = isSelected ? -1 : optionIndex;
                                           });
@@ -998,7 +1067,8 @@ class _TableInOrderState extends State<TableInOrder> {
                                     children: variation.options.asMap().entries.map((entry) {
                                       int optionIndex = entry.key;
                                       var option = entry.value;
-                                      final isSelected = (selectedMultipleVariations[variation.id] ?? []).contains(optionIndex);
+                                      final isSelected =
+                                      (selectedMultipleVariations[variation.id] ?? []).contains(optionIndex);
                                       return CheckboxListTile(
                                         key: ValueKey('option_${variation.id}_$optionIndex'),
                                         title: Text(
@@ -1043,135 +1113,143 @@ class _TableInOrderState extends State<TableInOrder> {
                                 ),
                               ),
                               SizedBox(height: 8.h),
-                              ...product.addons.map((addon) => Padding(
-                                key: ValueKey('addon_${addon.id}'),
-                                padding: EdgeInsets.symmetric(vertical: 4.h),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Row(
-                                        children: [
-                                          Container(
-                                            width: 40.w,
-                                            height: 40.h,
-                                            decoration: BoxDecoration(
-                                              color: AppColors.borderColor,
-                                              borderRadius: BorderRadius.circular(8.r),
-                                            ),
-                                            child: Icon(Icons.fastfood, size: 20.sp),
-                                          ),
-                                          SizedBox(width: 8.w),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  addon.name,
-                                                  style: GoogleFonts.poppins(
-                                                    fontSize: 14.sp,
-                                                    fontWeight: FontWeight.w600,
-                                                    color: AppColors.black,
-                                                  ),
-                                                ),
-                                                Text(
-                                                  "${addon.price.toStringAsFixed(0)}",
-                                                  style: GoogleFonts.poppins(
-                                                    fontSize: 12.sp,
-                                                    color: AppColors.subColor,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        border: Border.all(color: AppColors.borderColor),
-                                        borderRadius: BorderRadius.circular(10.r),
-                                        color: AppColors.white,
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          GestureDetector(
-                                            onTap: () {
-                                              print("➖ Decrement addon ${addon.name}: ${addonQuantities[addon.id]}");
-                                              setDialogState(() {
-                                                if ((addonQuantities[addon.id] ?? 0) > 0) {
-                                                  addonQuantities[addon.id] = (addonQuantities[addon.id] ?? 0) - 1;
-                                                }
-                                              });
-                                            },
-                                            child: Container(
-                                              width: 32.w,
-                                              height: 32.h,
+                              ...product.addons.asMap().entries.map((entry) {
+                                int index = entry.key;
+                                var addon = entry.value;
+                                return Padding(
+                                  key: ValueKey('addon_${addon.id}_$index'),
+                                  padding: EdgeInsets.symmetric(vertical: 4.h),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              width: 40.w,
+                                              height: 40.h,
                                               decoration: BoxDecoration(
                                                 color: AppColors.borderColor,
-                                                borderRadius: BorderRadius.circular(4.r),
+                                                borderRadius: BorderRadius.circular(8.r),
                                               ),
-                                              child: Icon(
-                                                Icons.remove,
-                                                size: 16.sp,
+                                              child: Icon(Icons.fastfood, size: 20.sp),
+                                            ),
+                                            SizedBox(width: 8.w),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    addon.name,
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 14.sp,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: AppColors.black,
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    "${addon.price.toStringAsFixed(0)}",
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 12.sp,
+                                                      color: AppColors.subColor,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          border: Border.all(color: AppColors.borderColor),
+                                          borderRadius: BorderRadius.circular(10.r),
+                                          color: AppColors.white,
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            GestureDetector(
+                                              onTap: () {
+                                                print("➖ Decrement addon ${addon.name}: ${addonQuantities[addon.id]}");
+                                                setDialogState(() {
+                                                  if ((addonQuantities[addon.id] ?? 0) > 0) {
+                                                    addonQuantities[addon.id] =
+                                                        (addonQuantities[addon.id] ?? 0) - 1;
+                                                  }
+                                                });
+                                              },
+                                              child: Container(
+                                                width: 32.w,
+                                                height: 32.h,
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.borderColor,
+                                                  borderRadius: BorderRadius.circular(4.r),
+                                                ),
+                                                child: Icon(
+                                                  Icons.remove,
+                                                  size: 16.sp,
+                                                  color: AppColors.black,
+                                                ),
+                                              ),
+                                            ),
+                                            SizedBox(width: 8.w),
+                                            Text(
+                                              "${addonQuantities[addon.id] ?? 0}",
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 14.sp,
+                                                fontWeight: FontWeight.w600,
                                                 color: AppColors.black,
                                               ),
                                             ),
-                                          ),
-                                          SizedBox(width: 8.w),
-                                          Text(
-                                            "${addonQuantities[addon.id] ?? 0}",
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 14.sp,
-                                              fontWeight: FontWeight.w600,
-                                              color: AppColors.black,
-                                            ),
-                                          ),
-                                          SizedBox(width: 8.w),
-                                          GestureDetector(
-                                            onTap: () {
-                                              print("➕ Increment addon ${addon.name}: ${addonQuantities[addon.id]}");
-                                              setDialogState(() {
-                                                int currentQuantity = addonQuantities[addon.id] ?? 0;
-                                                int maxAllowed = addon.quantityAdd == 0 ? 1 : 999;
-                                                if (currentQuantity < maxAllowed) {
-                                                  addonQuantities[addon.id] = currentQuantity + 1;
-                                                } else {
-                                                  print("⚠️ Max quantity reached for ${addon.name}: $maxAllowed");
-                                                  ToastMessage.toastMessage(
-                                                      'Maximum quantity reached for ${addon.name} ($maxAllowed)',
-                                                      AppColors.primary,
-                                                      AppColors.white);
-                                                }
-                                              });
-                                            },
-                                            child: Container(
-                                              width: 32.w,
-                                              height: 32.h,
-                                              decoration: BoxDecoration(
-                                                color: addonQuantities[addon.id] != null &&
-                                                    addonQuantities[addon.id]! >= (addon.quantityAdd == 0 ? 1 : 999)
-                                                    ? AppColors.borderColor.withOpacity(0.5)
-                                                    : AppColors.borderColor,
-                                                borderRadius: BorderRadius.circular(4.r),
-                                              ),
-                                              child: Icon(
-                                                Icons.add,
-                                                size: 16.sp,
-                                                color: addonQuantities[addon.id] != null &&
-                                                    addonQuantities[addon.id]! >= (addon.quantityAdd == 0 ? 1 : 999)
-                                                    ? AppColors.subColor
-                                                    : AppColors.black,
+                                            SizedBox(width: 8.w),
+                                            GestureDetector(
+                                              onTap: () {
+                                                print("➕ Increment addon ${addon.name}: ${addonQuantities[addon.id]}");
+                                                setDialogState(() {
+                                                  int currentQuantity = addonQuantities[addon.id] ?? 0;
+                                                  int maxAllowed = addon.quantityAdd == 0 ? 1 : 999;
+                                                  if (currentQuantity < maxAllowed) {
+                                                    addonQuantities[addon.id] = currentQuantity + 1;
+                                                  } else {
+                                                    print(
+                                                        "⚠️ Max quantity reached for ${addon.name}: $maxAllowed");
+                                                    ToastMessage.toastMessage(
+                                                        'Maximum quantity reached for ${addon.name} ($maxAllowed)',
+                                                        AppColors.primary,
+                                                        AppColors.white);
+                                                  }
+                                                });
+                                              },
+                                              child: Container(
+                                                width: 32.w,
+                                                height: 32.h,
+                                                decoration: BoxDecoration(
+                                                  color: addonQuantities[addon.id] != null &&
+                                                      addonQuantities[addon.id]! >=
+                                                          (addon.quantityAdd == 0 ? 1 : 999)
+                                                      ? AppColors.borderColor.withOpacity(0.5)
+                                                      : AppColors.borderColor,
+                                                  borderRadius: BorderRadius.circular(4.r),
+                                                ),
+                                                child: Icon(
+                                                  Icons.add,
+                                                  size: 16.sp,
+                                                  color: addonQuantities[addon.id] != null &&
+                                                      addonQuantities[addon.id]! >=
+                                                          (addon.quantityAdd == 0 ? 1 : 999)
+                                                      ? AppColors.subColor
+                                                      : AppColors.black,
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              )),
+                                    ],
+                                  ),
+                                );
+                              }),
                             ],
                             if (product.excludes.isNotEmpty) ...[
                               SizedBox(height: 12.h),
@@ -1272,19 +1350,26 @@ class _TableInOrderState extends State<TableInOrder> {
                                 bool isValid = true;
                                 for (var variation in product.variations) {
                                   if (variation.required == 1 || (variation.min != null && variation.min! > 0)) {
-                                    if (variation.type == 'single' && selectedSingleVariations[variation.id] == -1) {
+                                    if (variation.type == 'single' &&
+                                        selectedSingleVariations[variation.id] == -1) {
                                       isValid = false;
                                       print("⚠️ Validation failed: ${variation.name} is required");
-                                      ToastMessage.toastMessage("Please select an option for ${variation.name}", AppColors.red, AppColors.white);
+                                      ToastMessage.toastMessage(
+                                          "Please select an option for ${variation.name}",
+                                          AppColors.red,
+                                          AppColors.white);
                                     } else if (variation.type == 'multiple') {
-                                      final selectedCount = (selectedMultipleVariations[variation.id] ?? []).length;
+                                      final selectedCount =
+                                          (selectedMultipleVariations[variation.id] ?? []).length;
                                       final minRequired = variation.min ?? 1;
                                       if (selectedCount < minRequired) {
                                         isValid = false;
-                                        print("⚠️ Validation failed: Select at least $minRequired option${minRequired > 1 ? 's' : ''} for ${variation.name}");
+                                        print(
+                                            "⚠️ Validation failed: Select at least $minRequired option${minRequired > 1 ? 's' : ''} for ${variation.name}");
                                         ScaffoldMessenger.of(parentContext).showSnackBar(
                                           SnackBar(
-                                            content: Text("Please select at least $minRequired option${minRequired > 1 ? 's' : ''} for ${variation.name}"),
+                                            content: Text(
+                                                "Please select at least $minRequired option${minRequired > 1 ? 's' : ''} for ${variation.name}"),
                                             behavior: SnackBarBehavior.floating,
                                           ),
                                         );
@@ -1300,6 +1385,8 @@ class _TableInOrderState extends State<TableInOrder> {
                                     'count': quantity,
                                     'note': noteController.text.isNotEmpty ? noteController.text : null,
                                     'amount': prices['totalPrice'] ?? 0.0,
+                                    'item_tax': prices['totalTax'] ?? 0.0,
+                                    'item_discount': prices['totalDiscount'] ?? 0.0,
                                     'addons': product.addons
                                         .asMap()
                                         .entries
@@ -1314,10 +1401,15 @@ class _TableInOrderState extends State<TableInOrder> {
                                     'variation': product.variations.map((variation) => {
                                       'variation_id': variation.id,
                                       'option_id': variation.type == 'single'
-                                          ? (selectedSingleVariations[variation.id] != null && selectedSingleVariations[variation.id]! >= 0
-                                          ? [variation.options[selectedSingleVariations[variation.id]!].id]
+                                          ? (selectedSingleVariations[variation.id] != null &&
+                                          selectedSingleVariations[variation.id]! >= 0
+                                          ? [
+                                        variation.options[selectedSingleVariations[variation.id]!].id
+                                      ]
                                           : [])
-                                          : (selectedMultipleVariations[variation.id] ?? []).map((index) => variation.options[index].id).toList(),
+                                          : (selectedMultipleVariations[variation.id] ?? [])
+                                          .map((index) => variation.options[index].id)
+                                          .toList(),
                                     }).toList(),
                                   };
 
@@ -1336,7 +1428,8 @@ class _TableInOrderState extends State<TableInOrder> {
                                     AppColors.white,
                                   );
 
-                                  print("📦 Product added to cart: ${newProduct['product_id']}, Amount: ${newProduct['amount']}");
+                                  print(
+                                      "📦 Product added to cart: ${newProduct['product_id']}, Amount: ${newProduct['amount']}");
                                 }
                               },
                               backgroundColor: AppColors.primary,
@@ -1352,8 +1445,9 @@ class _TableInOrderState extends State<TableInOrder> {
                     ],
                   ),
                 ),
-              ),
+              )
             );
+
           },
         );
       },

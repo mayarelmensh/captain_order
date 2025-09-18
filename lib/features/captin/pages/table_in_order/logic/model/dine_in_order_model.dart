@@ -1,33 +1,32 @@
-
 class ProductListResponseModel {
-final List<Category> categories;
-final List<Product> products;
-final List<CafeLocation> cafeLocation;
-final List<PaymentMethod> paymentMethods;
+  final List<Category> categories;
+  final List<Product> products;
+  final List<CafeLocation> cafeLocation;
+  final List<PaymentMethod> paymentMethods;
 
-ProductListResponseModel({
-required this.categories,
-required this.products,
-required this.cafeLocation,
-required this.paymentMethods,
-});
+  ProductListResponseModel({
+    required this.categories,
+    required this.products,
+    required this.cafeLocation,
+    required this.paymentMethods,
+  });
 
-factory ProductListResponseModel.fromJson(Map<String, dynamic> json) {
-return ProductListResponseModel(
-categories: (json['categories'] as List)
-    .map((x) => Category.fromJson(x))
-    .toList(),
-products: (json['products'] as List)
-    .map((x) => Product.fromJson(x))
-    .toList(),
-cafeLocation: (json['cafe_location'] as List)
-    .map((x) => CafeLocation.fromJson(x))
-    .toList(),
-paymentMethods: (json['payment_methods'] as List)
-    .map((x) => PaymentMethod.fromJson(x))
-    .toList(),
-);
-}
+  factory ProductListResponseModel.fromJson(Map<String, dynamic> json) {
+    return ProductListResponseModel(
+      categories: (json['categories'] as List)
+          .map((x) => Category.fromJson(x))
+          .toList(),
+      products: (json['products'] as List)
+          .map((x) => Product.fromJson(x))
+          .toList(),
+      cafeLocation: (json['cafe_location'] as List)
+          .map((x) => CafeLocation.fromJson(x))
+          .toList(),
+      paymentMethods: (json['payment_methods'] as List)
+          .map((x) => PaymentMethod.fromJson(x))
+          .toList(),
+    );
+  }
 }
 
 class Category {
@@ -132,90 +131,117 @@ updatedAt: DateTime.parse(json['updated_at']),
 }
 
 class Product {
-final int id;
-final String name;
-final String? description;
-final int categoryId;
-final int? subCategoryId;
-final double price;
-final double? priceAfterDiscount;
-final double? priceAfterTax;
-final String imageLink;
-final List<Addon> addons;
-final List<Exclude> excludes;
-final List<Variation> variations;
-final List<Extra>? allExtras; // Added
-final Discount? discount; // Added
+  final int id;
+  final String name;
+  final String? description;
+  final int categoryId;
+  final int? subCategoryId;
+  final double price;
+  final double? priceAfterDiscount;
+  final double? priceAfterTax;
+  final double? taxVal; // جديد: قيمة الضريبة الفعلية
+  final double? discountVal; // جديد: قيمة الخصم الفعلية
+  final String imageLink;
+  final List<Addon> addons;
+  final List<Exclude> excludes;
+  final List<Variation> variations;
+  final List<Extra>? allExtras;
+  final Discount? discount;
 
-Product({
-required this.id,
-required this.name,
-this.description,
-required this.categoryId,
-this.subCategoryId,
-required this.price,
-this.priceAfterDiscount,
-this.priceAfterTax,
-required this.imageLink,
-required this.addons,
-required this.excludes,
-required this.variations,
-this.allExtras,
-this.discount,
-});
+  Product({
+    required this.id,
+    required this.name,
+    this.description,
+    required this.categoryId,
+    this.subCategoryId,
+    required this.price,
+    this.priceAfterDiscount,
+    this.priceAfterTax,
+    this.taxVal,
+    this.discountVal,
+    required this.imageLink,
+    required this.addons,
+    required this.excludes,
+    required this.variations,
+    this.allExtras,
+    this.discount,
+  });
 
-factory Product.fromJson(Map<String, dynamic> json) => Product(
-id: json['id'],
-name: json['name'],
-description: json['description'] == 'null' ? null : json['description'],
-categoryId: json['category_id'],
-subCategoryId: json['sub_category_id'],
-price: (json['price'] as num).toDouble(),
-priceAfterDiscount: json['price_after_discount'] != null
-? (json['price_after_discount'] as num).toDouble()
-    : null,
-priceAfterTax: json['price_after_tax'] != null
-? (json['price_after_tax'] as num).toDouble()
-    : null,
-imageLink: json['image_link'],
-addons: json['addons'] != null
-? List<Addon>.from(json['addons'].map((x) => Addon.fromJson(x)))
-    : [],
-excludes: json['excludes'] != null
-? List<Exclude>.from(json['excludes'].map((x) => Exclude.fromJson(x)))
-    : [],
-variations: json['variations'] != null
-? List<Variation>.from(json['variations'].map((x) => Variation.fromJson(x)))
-    : [],
-allExtras: json['allExtras'] != null
-? List<Extra>.from(json['allExtras'].map((x) => Extra.fromJson(x)))
-    : null,
-discount: json['discount'] != null ? Discount.fromJson(json['discount']) : null,
-);
+  factory Product.fromJson(Map<String, dynamic> json) => Product(
+    id: json['id'],
+    name: json['name'] ?? 'Unnamed Product',
+    description: json['description'] == 'null' ? null : json['description'],
+    categoryId: json['category_id'],
+    subCategoryId: json['sub_category_id'],
+    price: (json['price'] as num).toDouble(),
+    priceAfterDiscount: json['price_after_discount'] != null
+        ? (json['price_after_discount'] as num).toDouble()
+        : null,
+    priceAfterTax: json['price_after_tax'] != null
+        ? (json['price_after_tax'] as num).toDouble()
+        : null,
+    taxVal: json['tax_val'] != null
+        ? (json['tax_val'] as num).toDouble()
+        : null, // جديد
+    discountVal: json['discount_val'] != null
+        ? (json['discount_val'] as num).toDouble()
+        : null, // جديد
+    imageLink: json['image_link'],
+    addons: json['addons'] != null
+        ? List<Addon>.from(json['addons'].map((x) => Addon.fromJson(x)))
+        : [],
+    excludes: json['excludes'] != null
+        ? List<Exclude>.from(json['excludes'].map((x) => Exclude.fromJson(x)))
+        : [],
+    variations: json['variations'] != null
+        ? List<Variation>.from(
+        json['variations'].map((x) => Variation.fromJson(x)))
+        : [],
+    allExtras: json['allExtras'] != null
+        ? List<Extra>.from(json['allExtras'].map((x) => Extra.fromJson(x)))
+        : null,
+    discount:
+    json['discount'] != null ? Discount.fromJson(json['discount']) : null,
+  );
 }
 
 class Addon {
-final int id;
-final String name;
-final double price;
-final int quantityAdd;
-final Tax? tax; // Added
+  final int id;
+  final String name;
+  final double price;
+  final double? priceAfterTax; // جديد: السعر بعد الضريبة
+  final double? taxVal; // جديد: قيمة الضريبة الفعلية
+  final double? discountVal; // جديد: قيمة الخصم الفعلية
+  final int quantityAdd;
+  final Tax? tax;
 
-Addon({
-required this.id,
-required this.name,
-required this.price,
-required this.quantityAdd,
-this.tax,
-});
+  Addon({
+    required this.id,
+    required this.name,
+    required this.price,
+    this.priceAfterTax,
+    this.taxVal,
+    this.discountVal,
+    required this.quantityAdd,
+    this.tax,
+  });
 
-factory Addon.fromJson(Map<String, dynamic> json) => Addon(
-id: json['id'],
-name: json['name'],
-price: (json['price'] as num).toDouble(),
-quantityAdd: json['quantity_add'],
-tax: json['tax'] != null ? Tax.fromJson(json['tax']) : null,
-);
+  factory Addon.fromJson(Map<String, dynamic> json) => Addon(
+    id: json['id'],
+    name: json['name'],
+    price: (json['price'] as num).toDouble(),
+    priceAfterTax: json['price_after_tax'] != null
+        ? (json['price_after_tax'] as num).toDouble()
+        : null, // جديد
+    taxVal: json['tax_val'] != null
+        ? (json['tax_val'] as num).toDouble()
+        : null, // جديد
+    discountVal: json['discount_val'] != null
+        ? (json['discount_val'] as num).toDouble()
+        : null, // جديد
+    quantityAdd: json['quantity_add'],
+    tax: json['tax'] != null ? Tax.fromJson(json['tax']) : null,
+  );
 }
 
 class Exclude {
