@@ -43,21 +43,14 @@ class OrderView extends StatelessWidget {
                 AppColors.primary.withOpacity(0.4),
               ],
             ),
-            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 20,
-                spreadRadius: 5,
-              ),
-            ],
+            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
           ),
           child: ClipRRect(
-            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
             child: Container(
               color: Colors.white.withOpacity(0.1),
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3), // Reduced blur intensity
                 child: Container(),
               ),
             ),
@@ -67,27 +60,20 @@ class OrderView extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.2),
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white.withOpacity(0.4)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.white.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                border: Border.all(color: Colors.white.withOpacity(0.3)),
               ),
               child: Image.asset(
                 'assets/images/logo.png',
-                height: 40,
-                width: 40,
+                height: 32,
+                width: 32,
                 fit: BoxFit.contain,
               ),
             ),
-            SizedBox(width: MediaQuery.of(context).size.width * 0.04),
+            SizedBox(width: MediaQuery.of(context).size.width * 0.03),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -96,30 +82,18 @@ class OrderView extends StatelessWidget {
                   'ORDERS',
                   style: GoogleFonts.poppins(
                     color: AppColors.white,
-                    fontSize: 26,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.5,
-                    shadows: [
-                      Shadow(
-                        offset: const Offset(0, 2),
-                        blurRadius: 6,
-                        color: Colors.black.withOpacity(0.3),
-                      ),
-                    ],
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1.2,
                   ),
                 ),
                 Container(
-                  height: 3,
-                  width: 70,
-                  margin: const EdgeInsets.only(top: 4),
+                  height: 2,
+                  width: 50,
+                  margin: const EdgeInsets.only(top: 2),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppColors.primary.withOpacity(0.8),
-                        AppColors.primary.withOpacity(0.3),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(2),
+                    color: AppColors.white.withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(1),
                   ),
                 ),
               ],
@@ -128,7 +102,7 @@ class OrderView extends StatelessWidget {
         ),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 16),
+            padding: const EdgeInsets.only(right: 12),
             child: IconButton(
               onPressed: () {
                 // Handle notification tap
@@ -136,37 +110,37 @@ class OrderView extends StatelessWidget {
               icon: Stack(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white.withOpacity(0.4)),
+                      border: Border.all(color: Colors.white.withOpacity(0.3)),
                     ),
                     child: const Icon(
                       Icons.notifications_outlined,
                       color: AppColors.white,
-                      size: 28,
+                      size: 22,
                     ),
                   ),
                   Positioned(
                     right: 0,
                     top: 0,
                     child: Container(
-                      padding: const EdgeInsets.all(4),
+                      padding: const EdgeInsets.all(3),
                       decoration: BoxDecoration(
                         color: AppColors.red,
                         shape: BoxShape.circle,
                         border: Border.all(color: AppColors.white, width: 1),
                       ),
                       constraints: const BoxConstraints(
-                        minWidth: 16,
-                        minHeight: 16,
+                        minWidth: 14,
+                        minHeight: 14,
                       ),
                       child: Text(
                         '3',
                         style: GoogleFonts.poppins(
                           color: AppColors.white,
-                          fontSize: 10,
+                          fontSize: 9,
                           fontWeight: FontWeight.bold,
                         ),
                         textAlign: TextAlign.center,
@@ -177,12 +151,12 @@ class OrderView extends StatelessWidget {
               ),
               tooltip: 'Notifications',
             ),
-          ).animate().fadeIn(duration: 600.ms).scale(),
+          ),
         ],
         centerTitle: false,
         elevation: 0,
-        iconTheme: const IconThemeData(color: AppColors.white, size: 28),
-        toolbarHeight: MediaQuery.of(context).size.height * 0.11,
+        iconTheme: const IconThemeData(color: AppColors.white, size: 26),
+        toolbarHeight: MediaQuery.of(context).size.height * 0.10,
         systemOverlayStyle: const SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
           statusBarIconBrightness: Brightness.light,
@@ -224,24 +198,17 @@ class LoadingWidget extends StatelessWidget {
           Shimmer.fromColors(
             baseColor: AppColors.grey.withOpacity(0.3),
             highlightColor: AppColors.grey.withOpacity(0.1),
-            child: Container(
-              width: 60,
-              height: 60,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.grey,
-              ),
-            ),
-          ).animate().scale(duration: 800.ms, curve: Curves.easeInOut),
-          const SizedBox(height: 20),
+            child: const CircularProgressIndicator(color: AppColors.primary),
+          ).animate().fadeIn(duration: 400.ms), // Simplified animation
+          const SizedBox(height: 16),
           Text(
             'Loading orders...',
             style: GoogleFonts.poppins(
               color: AppColors.grey,
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.w500,
             ),
-          ).animate().fadeIn(duration: 600.ms),
+          ),
         ],
       ),
     );
@@ -262,80 +229,51 @@ class ErrorMessageWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: AppColors.red.withOpacity(0.15),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.error_outline,
-                color: AppColors.red,
-                size: 50,
-              ),
-            ).animate().shake(duration: 800.ms),
-            const SizedBox(height: 24),
+            const Icon(
+              Icons.error_outline,
+              color: AppColors.red,
+              size: 60,
+            ),
+            const SizedBox(height: 16),
             Text(
               'Error occurred',
               style: GoogleFonts.poppins(
                 color: AppColors.darkGrey,
-                fontSize: 22,
+                fontSize: 18,
                 fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Text(
               message,
               textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
                 color: AppColors.grey,
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: FontWeight.w400,
               ),
             ),
-            const SizedBox(height: 24),
-            InkWell(
-              onTap: onRetry,
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [AppColors.primary, AppColors.primary],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withOpacity(0.3),
-                      blurRadius: 10,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-                child: Text(
-                  'Try Again',
-                  style: GoogleFonts.poppins(
-                    color: AppColors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: onRetry,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: Text(
+                'Try Again',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-            ).animate().fadeIn(duration: 600.ms).scale(),
+            ).animate().fadeIn(duration: 400.ms), // Simplified animation
           ],
         ),
       ),
@@ -350,46 +288,39 @@ class EmptyOrdersWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 120,
-              height: 120,
+              width: 80,
+              height: 80,
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.15),
+                color: AppColors.primary.withOpacity(0.1),
                 shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    spreadRadius: 2,
-                  ),
-                ],
               ),
               child: const Icon(
                 Icons.shopping_cart_outlined,
                 color: AppColors.primary,
-                size: 60,
+                size: 40,
               ),
-            ).animate().fadeIn(duration: 600.ms).scale(),
-            const SizedBox(height: 24),
+            ).animate().fadeIn(duration: 400.ms), // Simplified animation
+            const SizedBox(height: 16),
             Text(
               'No orders available',
               style: GoogleFonts.poppins(
                 color: AppColors.darkGrey,
-                fontSize: 22,
+                fontSize: 18,
                 fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Text(
               'Orders will appear here once available',
               textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
                 color: AppColors.grey,
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: FontWeight.w400,
               ),
             ),
@@ -414,54 +345,53 @@ class OrderListWidget extends StatelessWidget {
         context.read<OrderCubit>().refreshOrders();
       },
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            SizedBox(height: MediaQuery.of(context).size.height * 0.16,),
+            SizedBox(height: MediaQuery.of(context).size.height * 0.14),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.9),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.borderColor.withOpacity(0.5)),
+                borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    spreadRadius: 2,
+                    color: Colors.black.withOpacity(0.05), // Reduced shadow intensity
+                    blurRadius: 8,
+                    spreadRadius: 1,
                   ),
                 ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(12),
                 child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                  filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3), // Reduced blur intensity
                   child: Container(
-                    padding: const EdgeInsets.all(4),
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(10),
+                          padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.15),
+                            color: AppColors.primary.withOpacity(0.1),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
                             Icons.receipt_long,
                             color: AppColors.primary,
-                            size: 24,
+                            size: 20,
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 10),
                         Text(
                           'Total Orders: ${orders.length}',
                           style: GoogleFonts.poppins(
                             color: AppColors.darkGrey,
-                            fontSize: 18,
+                            fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -470,20 +400,19 @@ class OrderListWidget extends StatelessWidget {
                   ),
                 ),
               ),
-            ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.2, end: 0),
+            ).animate().fadeIn(duration: 400.ms), // Simplified animation
             Expanded(
               child: ListView.builder(
-                padding: const EdgeInsets.only(top: 20),
+                physics: const ClampingScrollPhysics(), // Smoother scrolling
+                padding: const EdgeInsets.only(top: 16),
                 itemCount: orders.length,
                 itemBuilder: (context, index) {
                   return OrderCard(order: orders[index])
                       .animate()
-                      .fadeIn(duration: 600.ms, delay: (100 * index).ms)
-                      .slideX(begin: 0.2, end: 0);
+                      .fadeIn(duration: 400.ms, delay: (100 * index).ms); // Lighter staggered animation
                 },
               ),
             ),
-
           ],
         ),
       ),
@@ -507,7 +436,7 @@ class OrderCard extends StatelessWidget {
               value: context.read<OrderCubit>(),
               child: OrderDetailsScreen(
                 orderId: order.id?.toInt() ?? 0,
-                orderNumber: order.id.toString(), // Assuming orderNumber exists; adjust if needed
+                orderNumber: order.id.toString(),
               ),
             ),
           ),
@@ -516,28 +445,29 @@ class OrderCard extends StatelessWidget {
       child: Card(
         elevation: 0,
         color: Colors.white.withOpacity(0.9),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.only(bottom: 12),
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 10,
-                spreadRadius: 2,
+                color: Colors.black.withOpacity(0.05), // Reduced shadow intensity
+                blurRadius: 8,
+                spreadRadius: 1,
               ),
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+              filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3), // Reduced blur intensity
               child: Container(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
-                  border: Border.all(color: Colors.white.withOpacity(0.3)),
-                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white.withOpacity(0.2)),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -546,39 +476,35 @@ class OrderCard extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [AppColors.primary, AppColors.primary],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(20),
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(16),
                           ),
                           child: Text(
-                            'Order #${order.id?.toInt() ?? 'N/A'}', // Replaced order.id with orderNumber
+                            'Order #${order.id?.toInt() ?? 'N/A'}',
                             style: GoogleFonts.poppins(
                               color: AppColors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.all(8),
+                          padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.15),
+                            color: AppColors.primary.withOpacity(0.1),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
                             Icons.arrow_forward_ios,
-                            size: 16,
+                            size: 14,
                             color: AppColors.primary,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -586,51 +512,51 @@ class OrderCard extends StatelessWidget {
                           Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(8),
+                                padding: const EdgeInsets.all(6),
                                 decoration: BoxDecoration(
-                                  color: AppColors.blue.withOpacity(0.15),
+                                  color: AppColors.blue.withOpacity(0.1),
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
                                   Icons.table_restaurant,
-                                  size: 20,
+                                  size: 16,
                                   color: AppColors.blue,
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 10),
                               Text(
                                 'Table ${order.table}',
                                 style: GoogleFonts.poppins(
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   color: AppColors.darkGrey,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 12),
                         ],
                         if (order.location?.isNotEmpty == true) ...[
                           Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(8),
+                                padding: const EdgeInsets.all(6),
                                 decoration: BoxDecoration(
-                                  color: AppColors.primary.withOpacity(0.15),
+                                  color: AppColors.primary.withOpacity(0.1),
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
                                   Icons.location_on,
-                                  size: 20,
+                                  size: 16,
                                   color: AppColors.primary,
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
                                   order.location!,
                                   style: GoogleFonts.poppins(
-                                    fontSize: 14,
+                                    fontSize: 13,
                                     color: AppColors.darkGrey,
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -640,30 +566,30 @@ class OrderCard extends StatelessWidget {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 12),
                         ],
                         if (order.notes?.isNotEmpty == true) ...[
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(8),
+                                padding: const EdgeInsets.all(6),
                                 decoration: BoxDecoration(
-                                  color: AppColors.purple.withOpacity(0.15),
+                                  color: AppColors.purple.withOpacity(0.1),
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
                                   Icons.note_alt,
-                                  size: 20,
+                                  size: 16,
                                   color: AppColors.purple,
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
                                   order.notes!,
                                   style: GoogleFonts.poppins(
-                                    fontSize: 14,
+                                    fontSize: 13,
                                     color: AppColors.darkGrey,
                                     fontWeight: FontWeight.w500,
                                   ),
