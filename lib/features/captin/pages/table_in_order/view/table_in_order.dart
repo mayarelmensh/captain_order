@@ -21,19 +21,20 @@ class TableInOrder extends StatefulWidget {
 }
 
 class _TableInOrderState extends State<TableInOrder> {
-  // Table data
   String? tableNumber;
   String? area;
   int? tableId;
-
-  // Order management variables
   List<Map<String, dynamic>> cartItems = [];
   double totalAmount = 0.0;
   double totalTax = 0.0;
   double totalDiscount = 0.0;
-
   TextEditingController searchController = TextEditingController();
   Timer? _debounce;
+
+  // New variables for category/subcategory selection
+  int? selectedCategoryId;
+  int? selectedSubCategoryId;
+  String selectedFilterType = 'all'; // 'all', 'category', 'subcategory'
 
   @override
   void initState() {
@@ -56,7 +57,6 @@ class _TableInOrderState extends State<TableInOrder> {
         tableId = args['id'] as int?;
         tableNumber = args['number'] as String?;
         area = args['area'] as String?;
-
         if (args['products'] != null && args['products'] is List) {
           final existingProducts = List<Map<String, dynamic>>.from(args['products']);
           if (existingProducts.isNotEmpty) {
@@ -98,6 +98,53 @@ class _TableInOrderState extends State<TableInOrder> {
       print("🔍 UI Search query sent: '$query'");
       context.read<ProductListCubit>().searchProducts(query);
     });
+  }
+
+  void _selectCategory(int categoryId) {
+    setState(() {
+      selectedCategoryId = categoryId;
+      selectedSubCategoryId = null;
+      selectedFilterType = 'category';
+    });
+    context.read<ProductListCubit>().filterProductsByCategory(categoryId);
+  }
+
+  void _selectSubCategory(int subCategoryId) {
+    setState(() {
+      selectedSubCategoryId = subCategoryId;
+      selectedFilterType = 'subcategory';
+    });
+    context.read<ProductListCubit>().filterProductsBySubCategory(subCategoryId);
+  }
+
+  void _selectAll() {
+    setState(() {
+      selectedCategoryId = null;
+      selectedSubCategoryId = null;
+      selectedFilterType = 'all';
+    });
+    context.read<ProductListCubit>().resetProducts();
+  }
+
+  List<Product> _getFilteredProducts(ProductListState state) {
+    if (state is ProductListLoaded) {
+      if (searchController.text.isNotEmpty) {
+        return state.filteredProducts;
+      }
+
+      if (selectedFilterType == 'all') {
+        return state.productResponse.products;
+      } else if (selectedFilterType == 'category' && selectedCategoryId != null) {
+        return state.productResponse.products
+            .where((product) => product.categoryId == selectedCategoryId)
+            .toList();
+      } else if (selectedFilterType == 'subcategory' && selectedSubCategoryId != null) {
+        return state.productResponse.products
+            .where((product) => product.subCategoryId == selectedSubCategoryId)
+            .toList();
+      }
+    }
+    return [];
   }
 
   void _goToConfirmOrder() async {
@@ -154,6 +201,7 @@ class _TableInOrderState extends State<TableInOrder> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Header with table info
                 Row(
                   children: [
                     CircleAvatar(
@@ -229,6 +277,8 @@ class _TableInOrderState extends State<TableInOrder> {
                   ],
                 ),
                 SizedBox(height: 20.h),
+
+                // Captain info and order type
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -254,7 +304,8 @@ class _TableInOrderState extends State<TableInOrder> {
                                       child: CircularProgressIndicator(
                                         color: AppColors.primary,
                                         value: loadingProgress.expectedTotalBytes != null
-                                            ? loadingProgress.cumulativeBytesLoaded / (loadingProgress.expectedTotalBytes ?? 1)
+                                            ? loadingProgress.cumulativeBytesLoaded /
+                                            (loadingProgress.expectedTotalBytes ?? 1)
                                             : null,
                                       ),
                                     );
@@ -322,6 +373,8 @@ class _TableInOrderState extends State<TableInOrder> {
                   ],
                 ),
                 SizedBox(height: 10.h),
+
+                // Title
                 Text(
                   "What's the order\n for this table?",
                   style: GoogleFonts.poppins(
@@ -331,6 +384,8 @@ class _TableInOrderState extends State<TableInOrder> {
                   ),
                 ),
                 SizedBox(height: 10.h),
+
+                // Search bar
                 Builder(
                   builder: (context) {
                     return TextFormField(
@@ -355,125 +410,267 @@ class _TableInOrderState extends State<TableInOrder> {
                   },
                 ),
                 SizedBox(height: 15.h),
+
+                // Categories and Subcategories List
                 BlocBuilder<ProductListCubit, ProductListState>(
                   buildWhen: (previous, current) => previous != current,
                   builder: (context, state) {
-                    print("📋 Building category tabs, state: ${state.runtimeType}");
                     if (state is ProductListLoaded) {
-                      final tabs = context.read<ProductListCubit>().getCategoryTabs();
-                      print("📋 Category tabs: ${tabs.length}, Selected index: ${state.selectedCategoryIndex}");
+                      final categories = state.productResponse.categories
+                          .where((cat) => cat.active == 1)
+                          .toList();
+
                       return Container(
-                        height: 32.h,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: tabs.length,
-                          itemBuilder: (context, index) {
-                            final isSelected = state.selectedCategoryIndex == index;
-                            return GestureDetector(
-                              onTap: () {
-                                print("📍 Selected category index: $index");
-                                context.read<ProductListCubit>().selectCategory(index);
-                              },
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                margin: EdgeInsets.only(right: 10.w),
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 15.w,
-                                  vertical: 8.h,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isSelected ? AppColors.primary : AppColors.borderColor,
-                                  borderRadius: BorderRadius.circular(25.r),
-                                ),
-                                child: Center(
-                                  child: Row(
-                                    children: [
-                                      if (index > 0 && state.productResponse.categories.isNotEmpty) ...[
-                                        ClipOval(
-                                          child: Image.network(
-                                            context.read<ProductListCubit>().getActiveCategories()[index - 1].imageLink,
-                                            width: 20.w,
-                                            height: 20.h,
-                                            fit: BoxFit.cover,
-                                            loadingBuilder: (context, child, loadingProgress) {
-                                              if (loadingProgress == null) return child;
-                                              return Center(
-                                                child: CircularProgressIndicator(
-                                                  color: AppColors.primary,
-                                                  value: loadingProgress.expectedTotalBytes != null
-                                                      ? loadingProgress.cumulativeBytesLoaded / (loadingProgress.expectedTotalBytes ?? 1)
-                                                      : null,
-                                                ),
-                                              );
-                                            },
-                                            errorBuilder: (context, error, stackTrace) {
-                                              print("🖼️ Category image error for ${tabs[index]}: $error");
-                                              return Image.asset(
-                                                'assets/images/top_rated_icon_unselected.png',
+                        height: 120.h, // Increased height for two rows
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Categories row
+                            Container(
+                              height: 40.h,
+                              child: ListView(
+                                scrollDirection: Axis.horizontal,
+                                children: [
+                                  // "All" option
+                                  GestureDetector(
+                                    onTap: _selectAll,
+                                    child: Container(
+                                      margin: EdgeInsets.only(right: 10.w),
+                                      padding: EdgeInsets.symmetric(horizontal: 15.w, vertical: 8.h),
+                                      decoration: BoxDecoration(
+                                        color: selectedFilterType == 'all'
+                                            ? AppColors.primary
+                                            : AppColors.borderColor,
+                                        borderRadius: BorderRadius.circular(25.r),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.apps,
+                                            size: 16.sp,
+                                            color: selectedFilterType == 'all'
+                                                ? AppColors.white
+                                                : AppColors.subColor,
+                                          ),
+                                          SizedBox(width: 5.w),
+                                          Text(
+                                            'All',
+                                            style: GoogleFonts.inter(
+                                              color: selectedFilterType == 'all'
+                                                  ? AppColors.white
+                                                  : AppColors.subColor,
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 12.sp,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  // Category options
+                                  ...categories.map((category) {
+                                    final isSelected = selectedCategoryId == category.id;
+                                    return GestureDetector(
+                                      onTap: () => _selectCategory(category.id),
+                                      child: Container(
+                                        margin: EdgeInsets.only(right: 10.w),
+                                        padding: EdgeInsets.symmetric(horizontal: 15.w, vertical: 8.h),
+                                        decoration: BoxDecoration(
+                                          color: isSelected
+                                              ? AppColors.primary
+                                              : AppColors.borderColor,
+                                          borderRadius: BorderRadius.circular(25.r),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            ClipOval(
+                                              child: Image.network(
+                                                category.imageLink,
                                                 width: 20.w,
                                                 height: 20.h,
-                                              );
-                                            },
-                                          ),
-                                        ),
-                                      ] else ...[
-                                        Image.asset(
-                                          isSelected
-                                              ? 'assets/images/top_rated_icon_selected.png'
-                                              : 'assets/images/top_rated_icon_unselected.png',
-                                        ),
-                                      ],
-                                      SizedBox(width: 7.w),
-                                      Text(
-                                        tabs[index],
-                                        style: GoogleFonts.inter(
-                                          color: isSelected ? AppColors.white : AppColors.subColor,
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 12.sp,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (context, error, stackTrace) {
+                                                  return Icon(
+                                                    Icons.fastfood,
+                                                    size: 20.sp,
+                                                    color: isSelected
+                                                        ? AppColors.white
+                                                        : AppColors.subColor,
+                                                  );
+                                                },
+                                              ),
+                                            ),
+                                            SizedBox(width: 7.w),
+                                            Text(
+                                              category.name,
+                                              style: GoogleFonts.inter(
+                                                color: isSelected
+                                                    ? AppColors.white
+                                                    : AppColors.subColor,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 12.sp,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                ),
+                                    );
+                                  }).toList(),
+                                ],
                               ),
-                            );
-                          },
+                            ),
+                            SizedBox(height: 10.h),
+                            // Subcategories row (only show if category is selected)
+                            if (selectedCategoryId != null)
+                              Container(
+                                height: 40.h,
+                                child: Builder(
+                                  builder: (context) {
+                                    final selectedCategory = categories.firstWhere(
+                                          (cat) => cat.id == selectedCategoryId,
+                                      orElse: () => categories.first,
+                                    );
+                                    // final subCategories = selectedCategory.subCategories
+                                    //     .where((sub) => sub.active == 1)
+                                    //     .toList();
+                                    final subCategories = selectedCategory.subCategories.toList()
+                                      ..sort((a, b) => a.priority.compareTo(b.priority));
+
+                                    if (subCategories.isEmpty) {
+                                      return Container(
+                                        height: 40.h,
+                                        alignment: Alignment.centerLeft,
+                                        child: Text(
+                                          'No subcategories available',
+                                          style: GoogleFonts.inter(
+                                            color: AppColors.subColor,
+                                            fontSize: 12.sp,
+                                          ),
+                                        ),
+                                      );
+                                    }
+
+                                    return ListView(
+                                      scrollDirection: Axis.horizontal,
+                                      children: subCategories.map((subCategory) {
+                                        final isSelected = selectedSubCategoryId == subCategory.id;
+                                        return GestureDetector(
+                                          onTap: () => _selectSubCategory(subCategory.id),
+                                          child: Container(
+                                            margin: EdgeInsets.only(right: 10.w),
+                                            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                                            decoration: BoxDecoration(
+                                              color: isSelected
+                                                  ? AppColors.primary ?? AppColors.primary.withOpacity(0.7)
+                                                  : AppColors.borderColor.withOpacity(0.7),
+                                              borderRadius: BorderRadius.circular(20.r),
+                                              border: Border.all(
+                                                color: isSelected
+                                                    ? AppColors.primary
+                                                    : Colors.transparent,
+                                                width: 1,
+                                              ),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                ClipOval(
+                                                  child: Image.network(
+                                                    subCategory.imageLink,
+                                                    width: 16.w,
+                                                    height: 16.h,
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder: (context, error, stackTrace) {
+                                                      return Icon(
+                                                        Icons.category,
+                                                        size: 16.sp,
+                                                        color: isSelected
+                                                            ? AppColors.white
+                                                            : AppColors.subColor,
+                                                      );
+                                                    },
+                                                  ),
+                                                ),
+                                                SizedBox(width: 5.w),
+                                                Text(
+                                                  subCategory.name,
+                                                  style: GoogleFonts.inter(
+                                                    color: isSelected
+                                                        ? AppColors.white
+                                                        : AppColors.subColor,
+                                                    fontWeight: FontWeight.w500,
+                                                    fontSize: 11.sp,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      }).toList(),
+                                    );
+                                  },
+                                ),
+                              )
+                            else if (selectedFilterType != 'all')
+                              Container(height: 40.h), // Placeholder to maintain layout
+                          ],
                         ),
                       );
                     }
-                    print("⚠️ Category tabs not built: State is ${state.runtimeType}");
-                    return Container(height: 32.h);
+                    return Container(height: 0.h);
                   },
                 ),
-                const SizedBox(height: 20),
+
+                SizedBox(height: 0.h),
+                // Selected category/subcategory title
                 BlocBuilder<ProductListCubit, ProductListState>(
                   buildWhen: (previous, current) => previous != current,
                   builder: (context, state) {
-                    print("📋 Building category title, state: ${state.runtimeType}");
                     if (state is ProductListLoaded) {
-                      final tabs = context.read<ProductListCubit>().getCategoryTabs();
-                      if (tabs.isNotEmpty && state.selectedCategoryIndex < tabs.length) {
-                        return Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 15),
-                          child: Text(
-                            tabs[state.selectedCategoryIndex],
-                            style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 22.sp,
-                            ),
-                          ),
+                      String title = 'All Products';
+                      if (selectedSubCategoryId != null) {
+                        final categories = state.productResponse.categories;
+                        final category = categories.firstWhere(
+                              (cat) => cat.subCategories.any((sub) => sub.id == selectedSubCategoryId),
+                          orElse: () => categories.first,
                         );
+                        final subCategory = category.subCategories.firstWhere(
+                              (sub) => sub.id == selectedSubCategoryId,
+                          orElse: () => category.subCategories.first,
+                        );
+                        title = subCategory.name;
+                      } else if (selectedCategoryId != null) {
+                        final category = state.productResponse.categories.firstWhere(
+                              (cat) => cat.id == selectedCategoryId,
+                          orElse: () => state.productResponse.categories.first,
+                        );
+                        title = category.name;
                       }
+
+                      return Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 15.w),
+                        child: Text(
+                          title,
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 22.sp,
+                          ),
+                        ),
+                      );
                     }
-                    print("⚠️ Category title not built: State is ${state.runtimeType}");
                     return SizedBox.shrink();
                   },
                 ),
+
+                // Products grid
                 Expanded(
                   child: BlocBuilder<ProductListCubit, ProductListState>(
                     buildWhen: (previous, current) => previous != current,
                     builder: (context, state) {
                       print("📋 Building products grid, state: ${state.runtimeType}");
+
                       if (state is ProductListLoading) {
                         print("📋 Showing loading indicator");
                         return Center(child: CircularProgressIndicator(color: AppColors.primary));
@@ -503,11 +700,9 @@ class _TableInOrderState extends State<TableInOrder> {
                           ),
                         );
                       } else if (state is ProductListLoaded) {
-                        final products = state.filteredProducts;
+                        final products = _getFilteredProducts(state);
                         print("📦 Rendering ${products.length} products");
-                        for (var product in products) {
-                          print("📋 Product: ${product.name}, Description: ${product.description}");
-                        }
+
                         if (products.isEmpty) {
                           print("⚠️ No products found for current filter");
                           return Center(
@@ -515,9 +710,9 @@ class _TableInOrderState extends State<TableInOrder> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  searchController.text.isEmpty
-                                      ? 'No products available in this category'
-                                      : 'No matching products found for "${searchController.text}"',
+                                  searchController.text.isNotEmpty
+                                      ? 'No matching products found for "${searchController.text}"'
+                                      : 'No products available in this selection',
                                   style: GoogleFonts.poppins(
                                     fontSize: 16.sp,
                                     color: AppColors.subColor,
@@ -527,18 +722,19 @@ class _TableInOrderState extends State<TableInOrder> {
                                 SizedBox(height: 10.h),
                                 ElevatedButton(
                                   onPressed: () {
-                                    print("🔄 Resetting search");
+                                    print("🔄 Resetting filters");
                                     searchController.clear();
-                                    context.read<ProductListCubit>().resetProducts();
+                                    _selectAll();
                                   },
-                                  child: Text('Clear Search', style: TextStyle(color: AppColors.primary)),
+                                  child: Text('Show All Products', style: TextStyle(color: AppColors.primary)),
                                 ),
                               ],
                             ),
                           );
                         }
+
                         return GridView.builder(
-                          key: ValueKey('${state.selectedCategoryIndex}_${products.length}_${searchController.text}'),
+                          key: ValueKey('${selectedFilterType}_${selectedCategoryId}_${selectedSubCategoryId}_${products.length}_${searchController.text}'),
                           itemCount: products.length,
                           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 2,
@@ -576,7 +772,8 @@ class _TableInOrderState extends State<TableInOrder> {
                                             child: CircularProgressIndicator(
                                               color: AppColors.primary,
                                               value: loadingProgress.expectedTotalBytes != null
-                                                  ? loadingProgress.cumulativeBytesLoaded / (loadingProgress.expectedTotalBytes ?? 1)
+                                                  ? loadingProgress.cumulativeBytesLoaded /
+                                                  (loadingProgress.expectedTotalBytes ?? 1)
                                                   : null,
                                             ),
                                           );
@@ -625,7 +822,7 @@ class _TableInOrderState extends State<TableInOrder> {
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
                                         Text(
-                                          "${product.price.toStringAsFixed(0)} \$ ",
+                                          "${(product.priceAfterDiscount ?? product.price).toStringAsFixed(0)} \$ ",
                                           style: GoogleFonts.poppins(
                                             fontSize: 18.sp,
                                             fontWeight: FontWeight.w700,
@@ -661,6 +858,8 @@ class _TableInOrderState extends State<TableInOrder> {
                     },
                   ),
                 ),
+
+                // Cart summary and order button
                 if (cartItems.isNotEmpty)
                   Container(
                     margin: EdgeInsets.only(top: 10.h),
@@ -754,63 +953,74 @@ class _TableInOrderState extends State<TableInOrder> {
     }
 
     Map<String, double> calculateItemPrice() {
+      // Use price after discount as base if available
       double basePrice = product.priceAfterDiscount ?? product.price;
-      double baseTax = 0.0;
-      if (product.priceAfterTax != null) {
-        baseTax = product.priceAfterTax! - (product.priceAfterDiscount ?? product.price);
-      }
+      double baseTax = product.taxVal ?? 0.0; // Use taxVal directly
+      double baseDiscount = product.discountVal ?? 0.0; // Use discountVal directly
       double variationPrice = 0.0;
+      double variationTax = 0.0; // If taxVal exists in variations in the future
       double addonsPrice = 0.0;
       double addonsTax = 0.0;
+      double addonsDiscount = 0.0;
       double extrasPrice = 0.0;
-      double totalDiscount = 0.0;
+      double extrasTax = 0.0; // If taxVal exists in extras in the future
+      double extrasDiscount = 0.0;
 
+      // Calculate variation price and tax
       for (var variation in product.variations) {
         if (variation.type == 'single' &&
             selectedSingleVariations[variation.id] != null &&
             selectedSingleVariations[variation.id]! >= 0) {
           if (selectedSingleVariations[variation.id]! < variation.options.length) {
             variationPrice += variation.options[selectedSingleVariations[variation.id]!].price;
+            // If taxVal for variation exists, add it here
           }
         } else if (variation.type == 'multiple') {
           final selectedOpts = selectedMultipleVariations[variation.id] ?? [];
           for (var optIndex in selectedOpts) {
             if (optIndex < variation.options.length) {
               variationPrice += variation.options[optIndex].price;
+              // If taxVal for variation exists, add it here
             }
           }
         }
       }
 
+      // Calculate addons price, tax, and discount
       for (var addon in product.addons) {
         int addonQty = addonQuantities[addon.id] ?? 0;
-        double addonBasePrice = addon.price * addonQty;
-        addonsPrice += addonBasePrice;
-        if (addon.tax != null && addon.tax!.amount != null) {
-          addonsTax += addonBasePrice * (addon.tax!.amount / 100);
-        }
+        addonsPrice += addon.price * addonQty;
+        addonsTax += (addon.taxVal ?? 0.0) * addonQty; // Use taxVal directly
+        addonsDiscount += (addon.discountVal ?? 0.0) * addonQty; // Use discountVal directly
       }
 
+      // Calculate extras price, tax, and discount
       if (product.allExtras != null) {
         for (var extra in product.allExtras!) {
           if (selectedExtras.contains(extra.id)) {
             extrasPrice += extra.price;
+            // If taxVal for extra exists, add it here
           }
         }
       }
 
+      // Per unit prices
       double unitPriceBeforeTax = basePrice + variationPrice + addonsPrice + extrasPrice;
-      double unitTax = baseTax + addonsTax;
+      double unitTax = baseTax + variationTax + addonsTax + extrasTax;
+      double unitDiscount = baseDiscount + addonsDiscount + extrasDiscount;
+
+      // Total for quantity
       double totalPrice = unitPriceBeforeTax * quantity;
       double totalTaxAmount = unitTax * quantity;
+      double totalDiscountAmount = unitDiscount * quantity;
 
       print(
-          "💰 Price Calculation: Base: $basePrice, Var: $variationPrice, Addons: $addonsPrice, Extras: $extrasPrice, Qty: $quantity, Total: $totalPrice, Tax: $totalTaxAmount, Disc: $totalDiscount");
+          "💰 Price Calculation: Base: $basePrice, Var: $variationPrice, Addons: $addonsPrice, Extras: $extrasPrice, Qty: $quantity, Total: $totalPrice, Tax: $totalTaxAmount, Disc: $totalDiscountAmount");
 
       return {
         'totalPrice': totalPrice,
         'totalTax': totalTaxAmount,
-        'totalDiscount': totalDiscount,
+        'totalDiscount': totalDiscountAmount,
       };
     }
 
@@ -831,7 +1041,7 @@ class _TableInOrderState extends State<TableInOrder> {
             print("📋 Addons: ${product.addons.length}");
             for (var addon in product.addons) {
               print(
-                  "  - Addon: ${addon.name}, Price: ${addon.price}, Quantity: ${addonQuantities[addon.id]}, Tax: ${addon.tax?.amount}");
+                  "  - Addon: ${addon.name}, Price: ${addon.price}, Quantity: ${addonQuantities[addon.id]}, TaxVal: ${addon.taxVal}, DiscountVal: ${addon.discountVal}");
             }
             print("📋 Excludes: ${product.excludes.length}");
             for (var exclude in product.excludes) {
@@ -843,7 +1053,7 @@ class _TableInOrderState extends State<TableInOrder> {
                 print("  - Extra: ${extra.name}, ID: ${extra.id}, Price: ${extra.price}");
               }
             }
-            print("📋 Discount: ${product.discount?.amount ?? 'None'}");
+            print("📋 Discount: ${product.discount?.amount ?? 'None'}, DiscountVal: ${product.discountVal}");
 
             return Dialog(
               backgroundColor: AppColors.white,
@@ -1394,6 +1604,9 @@ class _TableInOrderState extends State<TableInOrder> {
                                         .map((entry) => {
                                       'addon_id': entry.value.id,
                                       'count': addonQuantities[entry.value.id],
+                                      'amount': entry.value.price * (addonQuantities[entry.value.id] ?? 0),
+                                      'item_tax': (entry.value.taxVal ?? 0.0) * (addonQuantities[entry.value.id] ?? 0),
+                                      'item_discount': (entry.value.discountVal ?? 0.0) * (addonQuantities[entry.value.id] ?? 0),
                                     })
                                         .toList(),
                                     'exclude_id': selectedExcludes.toList(),
@@ -1429,7 +1642,7 @@ class _TableInOrderState extends State<TableInOrder> {
                                   );
 
                                   print(
-                                      "📦 Product added to cart: ${newProduct['product_id']}, Amount: ${newProduct['amount']}");
+                                      "📦 Product added to cart: ${newProduct['product_id']}, Amount: ${newProduct['amount']}, Tax: ${newProduct['item_tax']}, Discount: ${newProduct['item_discount']}");
                                 }
                               },
                               backgroundColor: AppColors.primary,
@@ -1445,9 +1658,8 @@ class _TableInOrderState extends State<TableInOrder> {
                     ],
                   ),
                 ),
-              )
+              ),
             );
-
           },
         );
       },
