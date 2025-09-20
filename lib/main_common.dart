@@ -13,6 +13,7 @@ import 'features/auth/login/view/login_screen.dart';
 import 'features/captin/pages/confirm_order/view/confirm_order_screen.dart';
 import 'features/captin/pages/dine_in_tables_screen/logic/cubit/dine_in_tables_cubit.dart';
 import 'features/captin/pages/dine_in_tables_screen/view/dine_in_tables_screen.dart';
+import 'features/captin/pages/dine_in_tables_screen/view/get_table_order_screen.dart';
 import 'features/captin/pages/dine_in_tables_screen/view/select_service.dart';
 import 'features/captin/pages/splash_screen/splash_screen.dart';
 import 'features/captin/pages/table_in_order/view/table_in_order.dart';
@@ -66,6 +67,7 @@ class MyApp extends StatelessWidget {
             AppRoutes.tableInOrder: (context) =>  TableInOrder(),
             AppRoutes.confirmOrder: (context) =>  ConfirmOrderScreen(),
             AppRoutes.selectService: (context) =>  SelectServiceScreen(),
+            AppRoutes.getTableOrder: (context) =>  GetTableOrderScreen(),
           },
         ),
       )

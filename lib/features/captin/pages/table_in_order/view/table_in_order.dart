@@ -234,7 +234,7 @@ class _TableInOrderState extends State<TableInOrder> {
                               ),
                               TextSpan(text: " "),
                               TextSpan(
-                                text: tableNumber != null ? "Table $tableNumber" : "Table 1",
+                                text: tableId != null ? "Table $tableId" : "Table 1",
                                 style: GoogleFonts.poppins(
                                   fontSize: 12.sp,
                                   color: AppColors.subColor,
@@ -247,33 +247,6 @@ class _TableInOrderState extends State<TableInOrder> {
                       ),
                     ),
                     const Spacer(),
-                    if (cartItems.isNotEmpty)
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(20.r),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.shopping_cart,
-                              size: 16.sp,
-                              color: AppColors.primary,
-                            ),
-                            SizedBox(width: 4.w),
-                            Text(
-                              '${cartItems.length}',
-                              style: GoogleFonts.poppins(
-                                fontSize: 12.sp,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                   ],
                 ),
                 SizedBox(height: 20.h),
@@ -421,7 +394,6 @@ class _TableInOrderState extends State<TableInOrder> {
                           .toList();
 
                       return Container(
-                        height: 120.h, // Increased height for two rows
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -521,38 +493,25 @@ class _TableInOrderState extends State<TableInOrder> {
                                 ],
                               ),
                             ),
-                            SizedBox(height: 10.h),
-                            // Subcategories row (only show if category is selected)
+                            SizedBox(height: 10.h,),
+                            // Subcategories row (only show if category is selected and has subcategories)
                             if (selectedCategoryId != null)
-                              Container(
-                                height: 40.h,
-                                child: Builder(
-                                  builder: (context) {
-                                    final selectedCategory = categories.firstWhere(
-                                          (cat) => cat.id == selectedCategoryId,
-                                      orElse: () => categories.first,
-                                    );
-                                    // final subCategories = selectedCategory.subCategories
-                                    //     .where((sub) => sub.active == 1)
-                                    //     .toList();
-                                    final subCategories = selectedCategory.subCategories.toList()
-                                      ..sort((a, b) => a.priority.compareTo(b.priority));
+                              Builder(
+                                builder: (context) {
+                                  final selectedCategory = categories.firstWhere(
+                                        (cat) => cat.id == selectedCategoryId,
+                                    orElse: () => categories.first,
+                                  );
+                                  final subCategories = selectedCategory.subCategories.toList()
+                                    ..sort((a, b) => a.priority.compareTo(b.priority));
 
-                                    if (subCategories.isEmpty) {
-                                      return Container(
-                                        height: 40.h,
-                                        alignment: Alignment.centerLeft,
-                                        child: Text(
-                                          'No subcategories available',
-                                          style: GoogleFonts.inter(
-                                            color: AppColors.subColor,
-                                            fontSize: 12.sp,
-                                          ),
-                                        ),
-                                      );
-                                    }
+                                  if (subCategories.isEmpty) {
+                                    return SizedBox(height: 0); // No space if no subcategories
+                                  }
 
-                                    return ListView(
+                                  return Container(
+                                    height: 40.h,
+                                    child: ListView(
                                       scrollDirection: Axis.horizontal,
                                       children: subCategories.map((subCategory) {
                                         final isSelected = selectedSubCategoryId == subCategory.id;
@@ -563,7 +522,7 @@ class _TableInOrderState extends State<TableInOrder> {
                                             padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
                                             decoration: BoxDecoration(
                                               color: isSelected
-                                                  ? AppColors.primary ?? AppColors.primary.withOpacity(0.7)
+                                                  ? AppColors.primary
                                                   : AppColors.borderColor.withOpacity(0.7),
                                               borderRadius: BorderRadius.circular(20.r),
                                               border: Border.all(
@@ -609,12 +568,10 @@ class _TableInOrderState extends State<TableInOrder> {
                                           ),
                                         );
                                       }).toList(),
-                                    );
-                                  },
-                                ),
-                              )
-                            else if (selectedFilterType != 'all')
-                              Container(height: 40.h), // Placeholder to maintain layout
+                                    ),
+                                  );
+                                },
+                              ),
                           ],
                         ),
                       );
@@ -734,7 +691,8 @@ class _TableInOrderState extends State<TableInOrder> {
                         }
 
                         return GridView.builder(
-                          key: ValueKey('${selectedFilterType}_${selectedCategoryId}_${selectedSubCategoryId}_${products.length}_${searchController.text}'),
+                          key: ValueKey(
+                              '${selectedFilterType}_${selectedCategoryId}_${selectedSubCategoryId}_${products.length}_${searchController.text}'),
                           itemCount: products.length,
                           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 2,
@@ -953,63 +911,54 @@ class _TableInOrderState extends State<TableInOrder> {
     }
 
     Map<String, double> calculateItemPrice() {
-      // Use price after discount as base if available
       double basePrice = product.priceAfterDiscount ?? product.price;
-      double baseTax = product.taxVal ?? 0.0; // Use taxVal directly
-      double baseDiscount = product.discountVal ?? 0.0; // Use discountVal directly
+      double baseTax = product.taxVal ?? 0.0;
+      double baseDiscount = product.discountVal ?? 0.0;
       double variationPrice = 0.0;
-      double variationTax = 0.0; // If taxVal exists in variations in the future
+      double variationTax = 0.0;
       double addonsPrice = 0.0;
       double addonsTax = 0.0;
       double addonsDiscount = 0.0;
       double extrasPrice = 0.0;
-      double extrasTax = 0.0; // If taxVal exists in extras in the future
+      double extrasTax = 0.0;
       double extrasDiscount = 0.0;
 
-      // Calculate variation price and tax
       for (var variation in product.variations) {
         if (variation.type == 'single' &&
             selectedSingleVariations[variation.id] != null &&
             selectedSingleVariations[variation.id]! >= 0) {
           if (selectedSingleVariations[variation.id]! < variation.options.length) {
             variationPrice += variation.options[selectedSingleVariations[variation.id]!].price;
-            // If taxVal for variation exists, add it here
           }
         } else if (variation.type == 'multiple') {
           final selectedOpts = selectedMultipleVariations[variation.id] ?? [];
           for (var optIndex in selectedOpts) {
             if (optIndex < variation.options.length) {
               variationPrice += variation.options[optIndex].price;
-              // If taxVal for variation exists, add it here
             }
           }
         }
       }
 
-      // Calculate addons price, tax, and discount
       for (var addon in product.addons) {
         int addonQty = addonQuantities[addon.id] ?? 0;
         addonsPrice += addon.price * addonQty;
-        addonsTax += (addon.taxVal ?? 0.0) * addonQty; // Use taxVal directly
-        addonsDiscount += (addon.discountVal ?? 0.0) * addonQty; // Use discountVal directly
+        addonsTax += (addon.taxVal ?? 0.0) * addonQty;
+        addonsDiscount += (addon.discountVal ?? 0.0) * addonQty;
       }
 
-      // Calculate extras price, tax, and discount
       if (product.allExtras != null) {
         for (var extra in product.allExtras!) {
           if (selectedExtras.contains(extra.id)) {
             extrasPrice += extra.price;
-            // If taxVal for extra exists, add it here
           }
         }
       }
 
-      // Per unit prices
       double unitPriceBeforeTax = basePrice + variationPrice + addonsPrice + extrasPrice;
       double unitTax = baseTax + variationTax + addonsTax + extrasTax;
       double unitDiscount = baseDiscount + addonsDiscount + extrasDiscount;
 
-      // Total for quantity
       double totalPrice = unitPriceBeforeTax * quantity;
       double totalTaxAmount = unitTax * quantity;
       double totalDiscountAmount = unitDiscount * quantity;
@@ -1605,8 +1554,10 @@ class _TableInOrderState extends State<TableInOrder> {
                                       'addon_id': entry.value.id,
                                       'count': addonQuantities[entry.value.id],
                                       'amount': entry.value.price * (addonQuantities[entry.value.id] ?? 0),
-                                      'item_tax': (entry.value.taxVal ?? 0.0) * (addonQuantities[entry.value.id] ?? 0),
-                                      'item_discount': (entry.value.discountVal ?? 0.0) * (addonQuantities[entry.value.id] ?? 0),
+                                      'item_tax': (entry.value.taxVal ?? 0.0) *
+                                          (addonQuantities[entry.value.id] ?? 0),
+                                      'item_discount': (entry.value.discountVal ?? 0.0) *
+                                          (addonQuantities[entry.value.id] ?? 0),
                                     })
                                         .toList(),
                                     'exclude_id': selectedExcludes.toList(),
@@ -1617,7 +1568,9 @@ class _TableInOrderState extends State<TableInOrder> {
                                           ? (selectedSingleVariations[variation.id] != null &&
                                           selectedSingleVariations[variation.id]! >= 0
                                           ? [
-                                        variation.options[selectedSingleVariations[variation.id]!].id
+                                        variation.options[
+                                        selectedSingleVariations[variation.id]!]
+                                            .id
                                       ]
                                           : [])
                                           : (selectedMultipleVariations[variation.id] ?? [])

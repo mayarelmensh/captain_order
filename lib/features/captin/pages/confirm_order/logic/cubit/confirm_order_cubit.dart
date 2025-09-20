@@ -59,7 +59,7 @@ class ConfirmOrderCubit extends Cubit<ConfirmOrderState> {
       print("🔍 Token: ${token.substring(0, token.length > 20 ? 20 : token.length)}...");
 
       final response = await DioHelper.postData(
-        url: '/captain/orders',
+        url: '/captain/dine_in_order',
         data: orderData,
         token: token,
       );
@@ -87,7 +87,7 @@ class ConfirmOrderCubit extends Cubit<ConfirmOrderState> {
       } else {
         print("❌ Unexpected server response: Status ${response.statusCode}");
         emit(ConfirmOrderError(
-            'Failed to confirm order: Unexpected server response (Status: ${response.statusCode})'));
+            'Failed to confirm order: Unexpected server response'));
         ToastMessage.toastMessage(
           'Failed to confirm order: Unexpected server response',
           AppColors.red,

@@ -8,5 +8,6 @@ class AppRoutes {
   static String confirmOrder = "/confirmOrder";
   static String selectService = "/select_service";
   static String roleScreen = "/role_screen";
+  static String getTableOrder = "/get_order_screen";
 
 }

@@ -533,7 +533,10 @@ class _DineInTablesScreenContentState extends State<_DineInTablesScreenContent> 
 
                             if (uiStatus == 'dining' ||
                                 uiStatus == 'reserved' ||
-                                uiStatus == 'paid') {
+                                uiStatus == 'paid' ||
+                                uiStatus=='waiting'
+                            )
+                            {
                               Navigator.pushNamed(
                                 context,
                                 AppRoutes.selectService,

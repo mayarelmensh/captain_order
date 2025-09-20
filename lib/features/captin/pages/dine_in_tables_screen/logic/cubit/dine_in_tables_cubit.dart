@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:food_2_go/controller/dio/dio_helper.dart';
 import 'package:food_2_go/controller/cache/shared_preferences_utils.dart';
 import 'package:food_2_go/features/captin/pages/dine_in_tables_screen/logic/cubit/dine_in_tables_states.dart';
+import 'package:food_2_go/features/captin/pages/dine_in_tables_screen/logic/model/get_table_order_model.dart';
 import '../model/dine_in_tables_model.dart';
 import '../model/get_table_model.dart';
 
@@ -161,7 +162,49 @@ class DineInTablesCubit extends Cubit<DineInTablesState> {
     return await updateTableStatus(tableId: tableId, newStatus: newStatus);
   }
 
-  // Change selected location tab
+  // Send checkout request
+  Future<bool> sendCheckoutRequest({required int tableId}) async {
+    emit(DineInTablesCheckoutProcessing(tableId)); // حالة معالجة الطلب
+    try {
+      await SharedPreferenceUtils.init();
+      final token = SharedPreferenceUtils.getData(key: 'token') as String;
+
+      final response = await DioHelper.postData(
+        url: '/captain/checkout_request',
+        query: {
+          'table_id': tableId,
+        },
+        token: token,
+      );
+
+      print("🛒 Checkout Request Response: ${response.data}");
+
+      if (response.statusCode == 200) {
+        final successMessage = response.data['success'] as String?; // خذ الـ success كـ String
+        if (successMessage != null && successMessage.toLowerCase().contains('success')) {
+          print("✅ Checkout request sent successfully for table $tableId");
+          emit(DineInTablesCheckoutSuccess(
+            tableId: tableId,
+            message: successMessage,
+          ));
+          return true;
+        } else {
+          print("❌ Checkout failed: ${response.data['message'] ?? 'Unknown error'}");
+          emit(DineInTablesError('Checkout failed: ${response.data['message'] ?? 'Unknown error'}'));
+          return false;
+        }
+      } else {
+        print("❌ Failed to send checkout request: Status ${response.statusCode}, Message: ${response.data['message']}");
+        emit(DineInTablesError('Failed to send checkout request (Status: ${response.statusCode}, Message: ${response.data['message'] ?? 'Unknown error'})'));
+        return false;
+      }
+    } catch (e, stackTrace) {
+      print("⚠️ Checkout Request Exception: $e");
+      print("📍 Stack Trace: $stackTrace");
+      emit(DineInTablesError('Error sending checkout request: $e'));
+      return false;
+    }
+  }  // Change selected location tab
   void selectLocation(int index) {
     final currentState = state;
     if (currentState is DineInTablesLoaded) {
@@ -169,6 +212,75 @@ class DineInTablesCubit extends Cubit<DineInTablesState> {
     }
   }
 
+  Future<void> getTableOrder({required int tableId}) async {
+    emit(GetTableOrderLoading());
+    try {
+      await SharedPreferenceUtils.init();
+      final token = SharedPreferenceUtils.getData(key: 'token') as String;
+
+      final response = await DioHelper.getData(
+        url: '/captain/dine_in_table_order/$tableId',
+        token: token,
+      );
+
+      print("📋 Table Order Response: ${response.data}");
+
+      if (response.statusCode == 200 && response.data != null) {
+        final jsonData = response.data;
+        if (jsonData['success'] != null && jsonData['success'] is List) {
+          final orders = (jsonData['success'] as List)
+              .map((item) => TableOrder.fromJson(item as Map<String, dynamic>))
+              .toList();
+          final tableOrderModel = GetTableOrderModel(orders: orders);
+          print("✅ Parsed Orders Count: ${tableOrderModel.orders.length}");
+          print("✅ Parsed Orders: $orders");
+          emit(GetTableOrderSuccess(tableOrderModel: tableOrderModel));
+        } else {
+          emit(GetTableOrderError(message: 'Invalid response format: No "success" array found'));
+        }
+      } else {
+        emit(GetTableOrderError(message: 'Failed to load table orders (Status: ${response.statusCode})'));
+      }
+    } catch (e, stackTrace) {
+      print("⚠️ Get Table Order Exception: $e");
+      print("📍 Stack Trace: $stackTrace");
+      emit(GetTableOrderError(message: 'Error loading table orders: $e'));
+    }
+  }
+
+  Future<void> updateOrderStatus({
+    required int tableId,
+    required int cartId,
+    required String status,
+  }) async {
+    // الـ Loading هيظهر بس لما تضغطي على "Confirm"
+    emit(GetTableOrderLoading());
+    try {
+      await SharedPreferenceUtils.init();
+      final token = SharedPreferenceUtils.getData(key: 'token') as String;
+
+      final response = await DioHelper.postData(
+        url: '/captain/preparing',
+        token: token,
+        query: {
+          'preparing[0][cart_id]': cartId,
+          'table_id': tableId,
+          'preparing[0][status]': status,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        print("✅ Order Status Updated: $status for cart $cartId");
+        getTableOrder(tableId: tableId); // تحديث القائمة
+      } else {
+        emit(GetTableOrderError(message: 'Failed to update order status (Status: ${response.statusCode})'));
+      }
+    } catch (e, stackTrace) {
+      print("⚠️ Update Order Status Exception: $e");
+      print("📍 Stack Trace: $stackTrace");
+      emit(GetTableOrderError(message: 'Error updating order status: $e'));
+    }
+  }
   // Get filtered tables based on selected location
   List<TableModel> getFilteredTables() {
     final currentState = state;

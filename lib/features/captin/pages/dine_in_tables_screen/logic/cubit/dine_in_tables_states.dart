@@ -1,4 +1,5 @@
 import '../model/dine_in_tables_model.dart';
+import '../model/get_table_order_model.dart';
 
 abstract class DineInTablesState {}
 
@@ -28,6 +29,30 @@ class DineInTablesLoaded extends DineInTablesState {
 
 class DineInTablesError extends DineInTablesState {
   final String message;
-
   DineInTablesError(this.message);
+}
+
+class DineInTablesCheckoutProcessing extends DineInTablesState {
+  final int tableId;
+
+  DineInTablesCheckoutProcessing(this.tableId);
+}
+
+class DineInTablesCheckoutSuccess extends DineInTablesState {
+  final int tableId;
+  final String message;
+
+  DineInTablesCheckoutSuccess({
+    required this.tableId,
+    required this.message,
+  });
+}
+class GetTableOrderLoading extends DineInTablesState{}
+class GetTableOrderError extends DineInTablesState{
+  String message;
+  GetTableOrderError({required this.message});
+}
+class GetTableOrderSuccess extends DineInTablesState{
+  GetTableOrderModel tableOrderModel;
+  GetTableOrderSuccess({required this.tableOrderModel});
 }

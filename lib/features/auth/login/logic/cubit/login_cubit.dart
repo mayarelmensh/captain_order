@@ -1,9 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import '../../../../../controller/cache/shared_preferences_utils.dart';
-import 'package:firebase_messaging/firebase_messaging.dart'; // 👈 مهم عشان نجيب الـ FCM Token
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../../../controller/cache/shared_preferences_utils.dart';
 import '../../../../../controller/dio/dio_helper.dart';
 import '../../../../../controller/errors/failures.dart';
 import '../model/login_model.dart';
@@ -16,6 +14,8 @@ class LoginCubit extends Cubit<LoginState> {
   String? captainName;
   String? captainId;
   String? captainImageLink;
+  LoginResponse? loginResponse; // ✅ إضافة هذا المتغير لحفظ الـ response كامل
+
   void togglePasswordVisibility() {
     isPasswordObscure = !isPasswordObscure;
     emit(ChangePasswordVisibilityState());
@@ -39,29 +39,30 @@ class LoginCubit extends Cubit<LoginState> {
       print("📦 Response Data: ${response.data}");
 
       if (response.statusCode == 200 && response.data['user'] != null) {
-
         // Parse safely
-        final loginResponse = LoginResponse.fromJson(response.data);
-        // حفظ بيانات الكابتن
-        captainName = loginResponse.captainOrder?.userName ?? userName;
-        captainId = loginResponse.captainOrder?.id?.toString() ?? '';
-        captainImageLink = loginResponse.captainOrder?.imageLink?.toString() ?? '';
+        loginResponse = LoginResponse.fromJson(response.data); // ✅ حفظ الـ response كامل
+
+        // ✅ استخدام user بدلاً من captainOrder
+        captainName = loginResponse!.captainOrder!.name ?? userName;
+        captainId = loginResponse!.captainOrder!.id?.toString() ?? '';
+        captainImageLink = loginResponse!.captainOrder!.imageLink ?? '';
 
         await SharedPreferenceUtils.saveData(key: 'captainName', value: captainName);
         await SharedPreferenceUtils.saveData(key: 'captainId', value: captainId);
         await SharedPreferenceUtils.saveData(key: 'captainImage', value: captainImageLink);
+
         // حفظ التوكن
         await SharedPreferenceUtils.saveData(
           key: 'token',
-          value: response.data['token'],
+          value: loginResponse!.token,
         );
-         await SharedPreferenceUtils.saveData(key: 'token', value: response.data['token']);
-        print("✅ Role from API: ${loginResponse.role}");
-        print("✅ Role from User: ${loginResponse.captainOrder?.role}");
-        print("✅ Final Role Used: ${loginResponse.role ?? loginResponse.captainOrder?.role}");
-        print("✅ $captainImageLink");
 
-        emit(LoginSuccess(loginResponse));
+        print("✅ Role from API: ${loginResponse!.role}");
+        print("✅ User Role: ${loginResponse!.captainOrder!.role}");
+        print("✅ Captain Name: $captainName");
+        print("✅ Captain Image: $captainImageLink");
+
+        emit(LoginSuccess(loginResponse!));
       } else {
         emit(LoginError(ServerError(
             errorMsg: 'Login failed: Unexpected response from server')));
@@ -76,7 +77,18 @@ class LoginCubit extends Cubit<LoginState> {
   void logout() {
     captainName = null;
     captainId = null;
+    captainImageLink = null;
+    loginResponse = null; // ✅ مسح الـ response كامل
     SharedPreferenceUtils.removeData(key: 'token');
+    SharedPreferenceUtils.removeData(key: 'captainName');
+    SharedPreferenceUtils.removeData(key: 'captainId');
+    SharedPreferenceUtils.removeData(key: 'captainImage');
     emit(LoginInitial());
   }
+
+  // ✅ إضافة methods مساعدة للوصول للبيانات
+  String get currentCaptainName => loginResponse?.captainOrder!.name ?? captainName ?? "Captain";
+  String get currentCaptainId => loginResponse?.captainOrder!.id?.toString() ?? captainId ?? "1";
+  String? get currentCaptainImage => loginResponse?.captainOrder!.imageLink ?? captainImageLink;
+  String get currentUserRole => loginResponse?.captainOrder!.role ?? "captain_order";
 }
