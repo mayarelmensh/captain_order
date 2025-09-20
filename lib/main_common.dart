@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:food_2_go/core/utils/app_colors.dart';
 import 'package:food_2_go/features/auth/login/logic/cubit/login_cubit.dart';
 import 'package:food_2_go/features/captin/pages/table_in_order/logic/cubit/dine_in_order_cubit.dart';
+import 'package:food_2_go/features/waiter/pages/home_screen/view/order_screen.dart';
 import 'app_config.dart';
 import 'controller/cache/shared_preferences_utils.dart';
 import 'controller/dio/dio_helper.dart';
@@ -68,6 +69,8 @@ class MyApp extends StatelessWidget {
             AppRoutes.confirmOrder: (context) =>  ConfirmOrderScreen(),
             AppRoutes.selectService: (context) =>  SelectServiceScreen(),
             AppRoutes.getTableOrder: (context) =>  GetTableOrderScreen(),
+            AppRoutes.getTableOrder: (context) =>  GetTableOrderScreen(),
+            AppRoutes.waiterOrderScreen:(context)=>OrderScreen()
           },
         ),
       )

@@ -114,27 +114,6 @@ class _SelectServiceScreenState extends State<SelectServiceScreen> {
                     ),
                   ),
                   SizedBox(height: 24.h),
-                  BlocBuilder<DineInTablesCubit, DineInTablesState>(
-                    builder: (context, state) {
-                      return GestureDetector(
-                        onTap: () {
-                          final cubit = context.read<DineInTablesCubit>();
-                          cubit.sendCheckoutRequest(tableId: tableId);
-                        },
-                        child: Image.asset('assets/images/request_payment.png'),
-                      );
-                    },
-                  ),
-                  SizedBox(height: 24.h),
-                  Text(
-                    "Or",
-                    style: GoogleFonts.poppins(
-                      fontSize: 20.sp,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.black,
-                    ),
-                  ),
-                  SizedBox(height: 24.h),
                  GestureDetector(
                    onTap: () {
                      Navigator.pushNamed(
@@ -154,7 +133,28 @@ class _SelectServiceScreenState extends State<SelectServiceScreen> {
                        Image.asset('assets/images/get_order.png')
                      ],
                    ),
-                 )
+                 ),
+                  SizedBox(height: 24.h),
+                  Text(
+                    "Or",
+                    style: GoogleFonts.poppins(
+                      fontSize: 20.sp,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.black,
+                    ),
+                  ),
+                  SizedBox(height: 24.h),
+                  BlocBuilder<DineInTablesCubit, DineInTablesState>(
+                    builder: (context, state) {
+                      return GestureDetector(
+                        onTap: () {
+                          final cubit = context.read<DineInTablesCubit>();
+                          cubit.sendCheckoutRequest(tableId: tableId);
+                        },
+                        child: Image.asset('assets/images/request_payment.png'),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
