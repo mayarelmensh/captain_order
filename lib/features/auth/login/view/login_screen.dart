@@ -70,7 +70,7 @@ class _LoginScreenState extends State<LoginScreen> {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (_) => RoleScreen(loginResponse: state.loginResponse), // ✅ مرريه هنا
+              builder: (_) => RoleScreen(loginResponse: state.loginResponse,), // ✅ مرريه هنا
             ),
           );
           // Navigate to home or next screen

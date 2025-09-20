@@ -99,7 +99,8 @@ class _GetTableOrderScreenState extends State<GetTableOrderScreen> {
                 itemBuilder: (context, index) {
                   final order = tableOrder.orders[index];
                   return Card(
-                    elevation: 6,
+                    color: AppColors.borderColor,
+                    elevation: 0.2,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15.r),
                     ),

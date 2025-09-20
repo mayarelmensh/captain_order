@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import '../../../../../controller/cache/shared_preferences_utils.dart';
@@ -8,13 +10,35 @@ import '../model/login_model.dart';
 import 'login_states.dart';
 
 class LoginCubit extends Cubit<LoginState> {
-  LoginCubit() : super(LoginInitial());
+  LoginCubit() : super(LoginInitial()) {
+    // تحميل البيانات المحفوظة عند إنشاء الـ Cubit
+    loadSavedData();
+  }
 
   bool isPasswordObscure = true;
   String? captainName;
   String? captainId;
   String? captainImageLink;
-  LoginResponse? loginResponse; // ✅ إضافة هذا المتغير لحفظ الـ response كامل
+  LoginResponse? loginResponse;
+
+  Future<void> loadSavedData() async {
+    try {
+      captainName = await SharedPreferenceUtils.getData(key: 'captainName')as String;
+      captainId = await SharedPreferenceUtils.getData(key: 'captainId')as String;
+      captainImageLink = await SharedPreferenceUtils.getData(key: 'captainImage')as String;
+
+      print("📂 Loaded saved data:");
+      print("👤 Captain Name: $captainName");
+      print("🆔 Captain ID: $captainId");
+      print("🖼️ Captain Image: $captainImageLink");
+
+      if (captainName != null || captainId != null || captainImageLink != null) {
+        emit(ChangePasswordVisibilityState()); // emit أي state عشان الـ UI يتحديث
+      }
+    } catch (e) {
+      print("⚠️ Error loading saved data: $e");
+    }
+  }
 
   void togglePasswordVisibility() {
     isPasswordObscure = !isPasswordObscure;
@@ -40,12 +64,12 @@ class LoginCubit extends Cubit<LoginState> {
 
       if (response.statusCode == 200 && response.data['user'] != null) {
         // Parse safely
-        loginResponse = LoginResponse.fromJson(response.data); // ✅ حفظ الـ response كامل
+        loginResponse = LoginResponse.fromJson(response.data);
 
-        // ✅ استخدام user بدلاً من captainOrder
-        captainName = loginResponse!.captainOrder!.name ?? userName;
-        captainId = loginResponse!.captainOrder!.id?.toString() ?? '';
-        captainImageLink = loginResponse!.captainOrder!.imageLink ?? '';
+        // ✅ استخدام captainOrder (اللي جاي من user في الـ API)
+        captainName = loginResponse!.captainOrder?.userName ?? userName;
+        captainId = loginResponse!.captainOrder?.id?.toString() ?? '';
+        captainImageLink = loginResponse!.captainOrder?.imageLink ?? '';
 
         await SharedPreferenceUtils.saveData(key: 'captainName', value: captainName);
         await SharedPreferenceUtils.saveData(key: 'captainId', value: captainId);
@@ -58,7 +82,7 @@ class LoginCubit extends Cubit<LoginState> {
         );
 
         print("✅ Role from API: ${loginResponse!.role}");
-        print("✅ User Role: ${loginResponse!.captainOrder!.role}");
+        print("✅ User Role: ${loginResponse!.captainOrder?.role}");
         print("✅ Captain Name: $captainName");
         print("✅ Captain Image: $captainImageLink");
 
@@ -78,7 +102,7 @@ class LoginCubit extends Cubit<LoginState> {
     captainName = null;
     captainId = null;
     captainImageLink = null;
-    loginResponse = null; // ✅ مسح الـ response كامل
+    loginResponse = null;
     SharedPreferenceUtils.removeData(key: 'token');
     SharedPreferenceUtils.removeData(key: 'captainName');
     SharedPreferenceUtils.removeData(key: 'captainId');
@@ -86,9 +110,14 @@ class LoginCubit extends Cubit<LoginState> {
     emit(LoginInitial());
   }
 
-  // ✅ إضافة methods مساعدة للوصول للبيانات
-  String get currentCaptainName => loginResponse?.captainOrder!.name ?? captainName ?? "Captain";
-  String get currentCaptainId => loginResponse?.captainOrder!.id?.toString() ?? captainId ?? "1";
-  String? get currentCaptainImage => loginResponse?.captainOrder!.imageLink ?? captainImageLink;
-  String get currentUserRole => loginResponse?.captainOrder!.role ?? "captain_order";
+  // ✅ إضافة methods مساعدة للوصول للبيانات - مع safe navigation
+  String get currentCaptainName => loginResponse?.captainOrder?.name ?? captainName ?? "Captain";
+  String get currentCaptainId => loginResponse?.captainOrder?.id?.toString() ?? captainId ?? "1";
+  String? get currentCaptainImage => loginResponse?.captainOrder?.imageLink ?? captainImageLink;
+  String get currentUserRole => loginResponse?.captainOrder?.role ?? "captain_order";
+
+  // إضافة method لإجبار تحديث الـ UI
+  void refreshUI() {
+    emit(ChangePasswordVisibilityState());
+  }
 }

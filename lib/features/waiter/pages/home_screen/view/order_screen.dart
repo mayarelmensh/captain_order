@@ -12,19 +12,19 @@ import '../logic/model/order_list.dart';
 import 'order_details_screen.dart';
 
 class OrderScreen extends StatelessWidget {
-  const OrderScreen({super.key});
+   OrderScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => OrderCubit()..getOrders(),
-      child: const OrderView(),
+      child:  OrderView(),
     );
   }
 }
 
 class OrderView extends StatelessWidget {
-  const OrderView({super.key});
+   OrderView({super.key});
 
   @override
   Widget build(BuildContext context) {
