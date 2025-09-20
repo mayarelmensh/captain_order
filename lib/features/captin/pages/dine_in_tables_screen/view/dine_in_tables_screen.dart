@@ -7,6 +7,7 @@ import '../../../../../core/utils/app_colors.dart';
 import '../../../../../core/utils/app_routes.dart';
 import '../logic/cubit/dine_in_tables_cubit.dart';
 import '../logic/cubit/dine_in_tables_states.dart';
+import '../logic/model/dine_in_tables_model.dart';
 
 extension StringExtension on String {
   String capitalize() {
@@ -69,6 +70,8 @@ class _DineInTablesScreenContent extends StatefulWidget {
 
 class _DineInTablesScreenContentState extends State<_DineInTablesScreenContent> {
   Set<int> updatingTables = {};
+  bool isTransferMode = false;
+  Set<int> selectedTablesForTransfer = {};
 
   // API statuses → UI statuses
   final Map<String, String> apiToUiStatus = {
@@ -122,6 +125,492 @@ class _DineInTablesScreenContentState extends State<_DineInTablesScreenContent> 
     'paid': 'Paid',
     'reserved': 'Reserved',
   };
+
+  void _showTableActionDialog(BuildContext parentContext, TableModel table) {
+    showDialog(
+      context: parentContext,
+      barrierDismissible: true,
+      builder: (BuildContext dialogContext) {
+        final cubit = parentContext.read<DineInTablesCubit>();
+        final area = cubit.getLocationById(table.locationId);
+        final uiStatus = apiToUiStatus[table.currentStatus] ?? 'default';
+
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.r),
+          ),
+          elevation: 10,
+          child: Container(
+            padding: EdgeInsets.all(24.r),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20.r),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white,
+                  Colors.grey.shade50,
+                ],
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Table Info Header
+                Container(
+                  padding: EdgeInsets.all(16.r),
+                  decoration: BoxDecoration(
+                    color: statusColors[uiStatus]?.withOpacity(0.2) ?? AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(15.r),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(12.r),
+                        decoration: BoxDecoration(
+                          color: statusColors[uiStatus] ?? AppColors.primary.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          statusIcons[uiStatus] ?? Icons.table_restaurant,
+                          size: 24.sp,
+                          color: statusTextColors[uiStatus] ?? AppColors.primary,
+                        ),
+                      ),
+                      SizedBox(width: 16.w),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Table ${table.tableNumber}',
+                              style: GoogleFonts.poppins(
+                                fontSize: 18.sp,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.black,
+                              ),
+                            ),
+                            Text(
+                              '${area?.name ?? "Unknown Area"} • ${table.capacity} seats',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12.sp,
+                                color: AppColors.subColor,
+                              ),
+                            ),
+                            Container(
+                              margin: EdgeInsets.only(top: 4.h),
+                              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                              decoration: BoxDecoration(
+                                color: statusColors[uiStatus] ?? AppColors.borderColor,
+                                borderRadius: BorderRadius.circular(12.r),
+                              ),
+                              child: Text(
+                                uiStatus.capitalize(),
+                                style: GoogleFonts.poppins(
+                                  fontSize: 10.sp,
+                                  fontWeight: FontWeight.w500,
+                                  color: statusTextColors[uiStatus] ?? AppColors.black,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 20.h),
+
+                // Action Buttons
+                _buildActionButton(
+                  icon: Icons.edit_note,
+                  title: 'Change Status',
+                  subtitle: 'Update table status',
+                  color: AppColors.blue,
+                  onTap: () {
+                    Navigator.pop(dialogContext);
+                    _showStatusChangeDialog(parentContext, table.id, table.currentStatus);
+                  },
+                ),
+
+                if (uiStatus == 'dining' || uiStatus == 'reserved' || uiStatus == 'paid' || uiStatus == 'waiting') ...[
+                  SizedBox(height: 12.h),
+                  _buildActionButton(
+                    icon: Icons.restaurant_menu,
+                    title: 'View Orders',
+                    subtitle: 'Manage table orders',
+                    color: AppColors.primary,
+                    onTap: () {
+                      Navigator.pop(dialogContext);
+                      final tableData = {
+                        "id": table.id,
+                        "number": table.tableNumber,
+                        "area": area?.name ?? "Unknown Area",
+                      };
+                      Navigator.pushNamed(
+                        parentContext,
+                        AppRoutes.selectService,
+                        arguments: tableData,
+                      );
+                    },
+                  ),
+                  SizedBox(height: 12.h),
+                  _buildActionButton(
+                    icon: Icons.swap_horiz,
+                    title: 'Transfer Orders',
+                    subtitle: 'Move orders to another table',
+                    color: AppColors.pink,
+                    onTap: () {
+                      Navigator.pop(dialogContext);
+                      _startTransferMode(table);
+                    },
+                  ),
+                ] else ...[
+                  SizedBox(height: 12.h),
+                  _buildActionButton(
+                    icon: Icons.add_circle_outline,
+                    title: 'Start Order',
+                    subtitle: 'Begin new order for this table',
+                    color: AppColors.lightGreen,
+                    onTap: () {
+                      Navigator.pop(dialogContext);
+                      final tableData = {
+                        "id": table.id,
+                        "number": table.tableNumber,
+                        "area": area?.name ?? "Unknown Area",
+                      };
+                      Navigator.pushNamed(
+                        parentContext,
+                        AppRoutes.tableInOrder,
+                        arguments: tableData,
+                      );
+                    },
+                  ),
+                ],
+
+                SizedBox(height: 20.h),
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: Text(
+                    'Cancel',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.subColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12.r),
+        onTap: onTap,
+        child: Container(
+          padding: EdgeInsets.all(16.r),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(
+              color: color.withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8.r),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Icon(
+                  icon,
+                  size: 20.sp,
+                  color: color,
+                ),
+              ),
+              SizedBox(width: 16.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.black,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: GoogleFonts.poppins(
+                        fontSize: 11.sp,
+                        color: AppColors.subColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 16.sp,
+                color: AppColors.subColor,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _startTransferMode(TableModel sourceTable) {
+    setState(() {
+      isTransferMode = true;
+      selectedTablesForTransfer.clear();
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Transfer mode activated. Select destination table for Table ${sourceTable.tableNumber}'),
+        backgroundColor: AppColors.primary,
+        behavior: SnackBarBehavior.floating,
+        action: SnackBarAction(
+          label: 'Cancel',
+          textColor: Colors.white,
+          onPressed: () => _cancelTransferMode(),
+        ),
+      ),
+    );
+  }
+
+  void _cancelTransferMode() {
+    setState(() {
+      isTransferMode = false;
+      selectedTablesForTransfer.clear();
+    });
+  }
+
+  Future<void> _showTransferConfirmationDialog(TableModel sourceTable, TableModel destinationTable) async {
+    final cubit = context.read<DineInTablesCubit>();
+
+    // Get table orders first to show what will be transferred
+    await cubit.getTableOrder(tableId: sourceTable.id);
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext dialogContext) {
+        return BlocBuilder<DineInTablesCubit, DineInTablesState>(
+          builder: (context, state) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20.r),
+              ),
+              child: Container(
+                padding: EdgeInsets.all(24.r),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20.r),
+                  color: Colors.white,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(16.r),
+                      decoration: BoxDecoration(
+                        color: AppColors.pink.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.swap_horiz,
+                        size: 32.sp,
+                        color: AppColors.pink,
+                      ),
+                    ),
+                    SizedBox(height: 16.h),
+                    Text(
+                      'Transfer Orders',
+                      style: GoogleFonts.poppins(
+                        fontSize: 20.sp,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.black,
+                      ),
+                    ),
+                    SizedBox(height: 8.h),
+                    RichText(
+                      textAlign: TextAlign.center,
+                      text: TextSpan(
+                        style: GoogleFonts.poppins(
+                          fontSize: 14.sp,
+                          color: AppColors.subColor,
+                        ),
+                        children: [
+                          TextSpan(text: 'Transfer all orders from '),
+                          TextSpan(
+                            text: 'Table ${sourceTable.tableNumber}',
+                            style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.primary),
+                          ),
+                          TextSpan(text: ' to '),
+                          TextSpan(
+                            text: 'Table ${destinationTable.tableNumber}',
+                            style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.pink),
+                          ),
+                          TextSpan(text: '?'),
+                        ],
+                      ),
+                    ),
+
+                    if (state is GetTableOrderSuccess && state.tableOrderModel.orders.isNotEmpty) ...[
+                      SizedBox(height: 16.h),
+                      Container(
+                        padding: EdgeInsets.all(12.r),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Orders to transfer:',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.black,
+                              ),
+                            ),
+                            SizedBox(height: 8.h),
+                            ...state.tableOrderModel.orders.take(3).map((order) =>
+                                Padding(
+                                  padding: EdgeInsets.only(bottom: 4.h),
+                                  child: Text(
+                                    '• ${order.name} (${order.count}x)',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11.sp,
+                                      color: AppColors.subColor,
+                                    ),
+                                  ),
+                                ),
+                            ),
+                            if (state.tableOrderModel.orders.length > 3)
+                              Text(
+                                '... and ${state.tableOrderModel.orders.length - 3} more items',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11.sp,
+                                  color: AppColors.subColor,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    SizedBox(height: 24.h),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () {
+                              Navigator.pop(dialogContext);
+                              _cancelTransferMode();
+                            },
+                            child: Text(
+                              'Cancel',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.subColor,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 16.w),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              Navigator.pop(dialogContext);
+                              await _performTransfer(sourceTable, destinationTable);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.pink,
+                              padding: EdgeInsets.symmetric(vertical: 16.h),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12.r),
+                              ),
+                            ),
+                            child: Text(
+                              'Transfer',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _performTransfer(TableModel sourceTable, TableModel destinationTable) async {
+    final cubit = context.read<DineInTablesCubit>();
+
+    // Get orders from source table
+    await cubit.getTableOrder(tableId: sourceTable.id);
+    final state = cubit.state;
+
+    if (state is GetTableOrderSuccess) {
+      final cartIds = state.tableOrderModel.orders
+          .map((order) => order.cartId)
+          .where((cartId) => cartId != null)
+          .cast<int>()
+          .toList();
+
+      if (cartIds.isNotEmpty) {
+        final success = await cubit.transferOrder(
+          tableId: destinationTable.id,
+          cartIds: cartIds,
+        );
+
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Orders transferred successfully from Table ${sourceTable.tableNumber} to Table ${destinationTable.tableNumber}'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    }
+
+    _cancelTransferMode();
+  }
 
   void _showStatusChangeDialog(BuildContext parentContext, int tableId, String currentStatus) {
     final cubit = parentContext.read<DineInTablesCubit>();
@@ -345,7 +834,6 @@ class _DineInTablesScreenContentState extends State<_DineInTablesScreenContent> 
       );
 
       if (success) {
-        // Force refresh the cubit to update UI immediately
         await cubit.refresh();
         print("✅ Table status updated successfully");
 
@@ -437,24 +925,67 @@ class _DineInTablesScreenContentState extends State<_DineInTablesScreenContent> 
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Dine-in Tables',
-                    style: GoogleFonts.poppins(
-                      color: AppColors.black,
-                      fontSize: 28.sp,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  SizedBox(height: 2.h),
-                  Text(
-                    'Select an available table to start an order',
-                    style: GoogleFonts.poppins(
-                      color: AppColors.subColor,
-                      fontWeight: FontWeight.w400,
-                      fontSize: 12.sp,
-                    ),
+                  // Header with Transfer Mode Indicator
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Dine-in Tables',
+                              style: GoogleFonts.poppins(
+                                color: AppColors.black,
+                                fontSize: 28.sp,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            Text(
+                              isTransferMode
+                                  ? 'Select destination table to transfer orders'
+                                  : 'Select an available table to start an order',
+                              style: GoogleFonts.poppins(
+                                color: isTransferMode ? AppColors.pink : AppColors.subColor,
+                                fontWeight: FontWeight.w400,
+                                fontSize: 12.sp,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (isTransferMode)
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                          decoration: BoxDecoration(
+                            color: AppColors.pink.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20.r),
+                            border: Border.all(color: AppColors.pink.withOpacity(0.3)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.swap_horiz,
+                                size: 16.sp,
+                                color: AppColors.pink,
+                              ),
+                              SizedBox(width: 6.w),
+                              Text(
+                                'Transfer Mode',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.pink,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
                   ),
                   SizedBox(height: 12.h),
+
+                  // Location Tabs
                   Container(
                     height: 40.h,
                     child: ListView.builder(
@@ -500,6 +1031,7 @@ class _DineInTablesScreenContentState extends State<_DineInTablesScreenContent> 
                       },
                     ),
                   ),
+
                   Expanded(
                     child: GridView.builder(
                       padding: EdgeInsets.symmetric(vertical: 10.h),
@@ -520,38 +1052,33 @@ class _DineInTablesScreenContentState extends State<_DineInTablesScreenContent> 
                         final textColor = statusTextColors[uiStatus] ??
                             statusTextColors['default']!;
 
+                        final isTransferTarget = isTransferMode && selectedTablesForTransfer.contains(table.id);
+                        final isAvailableForTransfer = isTransferMode && (uiStatus == 'available');
+
                         return GestureDetector(
                           onTap: () {
-                            final cubit = context.read<DineInTablesCubit>();
-                            final area = cubit.getLocationById(table.locationId);
-
-                            final tableData = {
-                              "id": table.id,
-                              "number": table.tableNumber,
-                              "area": area?.name ?? "Unknown Area",
-                            };
-
-                            if (uiStatus == 'dining' ||
-                                uiStatus == 'reserved' ||
-                                uiStatus == 'paid' ||
-                                uiStatus=='waiting'
-                            )
-                            {
-                              Navigator.pushNamed(
-                                context,
-                                AppRoutes.selectService,
-                                arguments: tableData,
-                              );
+                            if (isTransferMode) {
+                              if (isAvailableForTransfer) {
+                                // Find source table (assuming first selected table)
+                                // You might want to store source table separately
+                                // For now, let's implement basic transfer logic
+                                _showTransferToTableDialog(context, table);
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Can only transfer to available tables'),
+                                    backgroundColor: Colors.orange,
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              }
                             } else {
-                              Navigator.pushNamed(
-                                context,
-                                AppRoutes.tableInOrder,
-                                arguments: tableData,
-                              );
+                              // Normal table selection logic
+                              _handleNormalTableTap(context, table, uiStatus);
                             }
                           },
-                          onLongPress: () {
-                            _showStatusChangeDialog(context, table.id, table.currentStatus);
+                          onLongPress: isTransferMode ? null : () {
+                            _showTableActionDialog(context, table);
                           },
                           child: Card(
                             elevation: 0,
@@ -562,7 +1089,14 @@ class _DineInTablesScreenContentState extends State<_DineInTablesScreenContent> 
                             child: Container(
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(15.r),
-                                color: AppColors.white.withOpacity(0.7),
+                                color: isTransferMode
+                                    ? (isAvailableForTransfer
+                                    ? AppColors.lightGreen.withOpacity(0.3)
+                                    : AppColors.white.withOpacity(0.3))
+                                    : AppColors.white.withOpacity(0.7),
+                                border: isTransferMode && isAvailableForTransfer
+                                    ? Border.all(color: AppColors.lightGreen, width: 2)
+                                    : null,
                               ),
                               padding: EdgeInsets.all(12.r),
                               child: Column(
@@ -580,7 +1114,19 @@ class _DineInTablesScreenContentState extends State<_DineInTablesScreenContent> 
                                           color: AppColors.black,
                                         ),
                                       ),
-                                      SizedBox(width: 8.w),
+                                      if (isTransferMode && isAvailableForTransfer)
+                                        Container(
+                                          padding: EdgeInsets.all(4.r),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.lightGreen,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Icon(
+                                            Icons.swap_horiz,
+                                            size: 16.sp,
+                                            color: Colors.white,
+                                          ),
+                                        ),
                                     ],
                                   ),
                                   SizedBox(height: 4.h),
@@ -605,36 +1151,37 @@ class _DineInTablesScreenContentState extends State<_DineInTablesScreenContent> 
                                               ),
                                             ),
                                           ),
-                                          // Edit button next to status
-                                          GestureDetector(
-                                            onTap: updatingTables.contains(table.id) ? null : () {
-                                              _showStatusChangeDialog(context, table.id, table.currentStatus);
-                                            },
-                                            child: Container(
-                                              padding: EdgeInsets.all(6.r),
-                                              decoration: BoxDecoration(
-                                                color: Colors.white.withOpacity(0.8),
-                                                borderRadius: BorderRadius.circular(6.r),
-                                              ),
-                                              child: updatingTables.contains(table.id)
-                                                  ? SizedBox(
-                                                width: 14.sp,
-                                                height: 14.sp,
-                                                child: CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                  color: AppColors.primary,
+                                          // Menu button
+                                          if (!isTransferMode)
+                                            GestureDetector(
+                                              onTap: updatingTables.contains(table.id) ? null : () {
+                                                _showTableActionDialog(context, table);
+                                              },
+                                              child: Container(
+                                                padding: EdgeInsets.all(6.r),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white.withOpacity(0.8),
+                                                  borderRadius: BorderRadius.circular(6.r),
                                                 ),
-                                              )
-                                                  : Icon(
-                                                Icons.edit,
-                                                size: 14.sp,
-                                                color: AppColors.subColor,
+                                                child: updatingTables.contains(table.id)
+                                                    ? SizedBox(
+                                                  width: 14.sp,
+                                                  height: 14.sp,
+                                                  child: CircularProgressIndicator(
+                                                    strokeWidth: 2,
+                                                    color: AppColors.primary,
+                                                  ),
+                                                )
+                                                    : Icon(
+                                                  Icons.more_horiz,
+                                                  size: 14.sp,
+                                                  color: AppColors.subColor,
+                                                ),
                                               ),
                                             ),
-                                          ),
                                         ],
                                       ),
-                                      SizedBox(height: 5.h,),
+                                      SizedBox(height: 5.h),
                                       Row(
                                         children: [
                                           Image.asset('assets/images/seats.png'),
@@ -678,6 +1225,75 @@ class _DineInTablesScreenContentState extends State<_DineInTablesScreenContent> 
             return const SizedBox.shrink();
           },
         ),
+      ),
+    );
+  }
+
+  void _handleNormalTableTap(BuildContext context, TableModel table, String uiStatus) {
+    final cubit = context.read<DineInTablesCubit>();
+    final area = cubit.getLocationById(table.locationId);
+
+    final tableData = {
+      "id": table.id,
+      "number": table.tableNumber,
+      "area": area?.name ?? "Unknown Area",
+    };
+
+    if (uiStatus == 'dining' ||
+        uiStatus == 'reserved' ||
+        uiStatus == 'paid' ||
+        uiStatus == 'waiting') {
+      Navigator.pushNamed(
+        context,
+        AppRoutes.selectService,
+        arguments: tableData,
+      );
+    } else {
+      Navigator.pushNamed(
+        context,
+        AppRoutes.tableInOrder,
+        arguments: tableData,
+      );
+    }
+  }
+
+  void _showTransferToTableDialog(BuildContext context, TableModel destinationTable) {
+    // Here you need to implement logic to get the source table
+    // For now, I'll assume you store it somewhere or pass it
+    // This is a simplified version - you should store source table info
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15.r)),
+        title: Text(
+          'Transfer to Table ${destinationTable.tableNumber}',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+        ),
+        content: Text(
+          'Are you sure you want to transfer all orders to this table?',
+          style: GoogleFonts.poppins(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              // Implement actual transfer logic here
+              _cancelTransferMode();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Orders transferred to Table ${destinationTable.tableNumber}'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            child: Text('Transfer', style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }

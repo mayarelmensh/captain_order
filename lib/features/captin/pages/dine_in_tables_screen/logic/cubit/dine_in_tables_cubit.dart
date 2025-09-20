@@ -82,6 +82,9 @@ class DineInTablesCubit extends Cubit<DineInTablesState> {
         if (response.data['data'] != null) {
           jsonData = response.data['data'] as Map<String, dynamic>;
         }
+        if (response.data['data'] != null) {
+          jsonData = response.data['data'] as Map<String, dynamic>;
+        }
 
         final tableStatusModel = GetTableModel.fromJson(jsonData);
         print("✅ Table Status loaded: ${tableStatusModel.tableStatus}");
@@ -204,7 +207,9 @@ class DineInTablesCubit extends Cubit<DineInTablesState> {
       emit(DineInTablesError('Error sending checkout request: $e'));
       return false;
     }
-  }  // Change selected location tab
+  }
+
+  // Change selected location tab
   void selectLocation(int index) {
     final currentState = state;
     if (currentState is DineInTablesLoaded) {
@@ -281,6 +286,99 @@ class DineInTablesCubit extends Cubit<DineInTablesState> {
       emit(GetTableOrderError(message: 'Error updating order status: $e'));
     }
   }
+
+  // Transfer order from one table to another
+  Future<bool> transferOrder({
+    required int tableId,
+    required List<int> cartIds,
+  }) async {
+    emit(DineInTablesLoading());
+    try {
+      await SharedPreferenceUtils.init();
+      final token = SharedPreferenceUtils.getData(key: 'token') as String;
+
+      // Prepare form data according to API requirements
+      Map<String, dynamic> formData = {
+        'table_id': tableId,
+      };
+
+      // Add cart IDs to form data
+      for (int i = 0; i < cartIds.length; i++) {
+        formData['cart_Ids[$i]'] = cartIds[i];
+      }
+
+      final response = await DioHelper.postData(
+        url: '/captain/transfer_order',
+        data: formData,
+        token: token,
+      );
+
+      print("🔄 Transfer Order Response: ${response.data}");
+      print("📋 Transfer Data Sent: $formData");
+
+      if (response.statusCode == 200 && response.data != null) {
+        final successMessage = response.data['success'] as String?;
+
+        if (successMessage != null && successMessage.isNotEmpty) {
+          print("✅ Order transferred successfully: $successMessage");
+
+          // Refresh data after successful transfer
+          await loadCafeData();
+
+          emit(DineInTablesTransferSuccess(
+            message: successMessage,
+            tableId: tableId,
+            cartIds: cartIds,
+          ));
+          return true;
+        } else {
+          final errorMessage = response.data['message'] ?? 'Transfer failed for unknown reason';
+          print("❌ Transfer failed: $errorMessage");
+          emit(DineInTablesError('Transfer failed: $errorMessage'));
+          return false;
+        }
+      } else {
+        print("❌ Failed to transfer order: Status ${response.statusCode}");
+        emit(DineInTablesError(
+            'Failed to transfer order (Status: ${response.statusCode})'
+        ));
+        return false;
+      }
+    } catch (e, stackTrace) {
+      print("⚠️ Transfer Order Exception: $e");
+      print("📍 Stack Trace: $stackTrace");
+      emit(DineInTablesError('Error transferring order: $e'));
+      return false;
+    }
+  }
+
+  // Helper method to transfer single cart item
+  Future<bool> transferSingleOrder({
+    required int tableId,
+    required int cartId,
+  }) async {
+    return await transferOrder(
+      tableId: tableId,
+      cartIds: [cartId],
+    );
+  }
+
+  // Helper method to transfer multiple cart items
+  Future<bool> transferMultipleOrders({
+    required int tableId,
+    required List<int> cartIds,
+  }) async {
+    if (cartIds.isEmpty) {
+      emit(DineInTablesError('No orders selected for transfer'));
+      return false;
+    }
+
+    return await transferOrder(
+      tableId: tableId,
+      cartIds: cartIds,
+    );
+  }
+
   // Get filtered tables based on selected location
   List<TableModel> getFilteredTables() {
     final currentState = state;
