@@ -40,13 +40,11 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   void initState() {
     super.initState();
 
-    // Header Animation Controller - أسرع قليلاً
     _headerAnimationController = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
     );
 
-    // Form Animation Controller - يبدأ بتأخير بسيط
     _formAnimationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -170,7 +168,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                 bottomRight: Radius.circular(70.r),
                               ),
                             ),
-                            child: Image.asset('assets/images/Frist Screen.png', )),
+                            child: Image.asset('assets/images/welcome.png', )),
                         SizedBox(height: 8.h),
                         Text(
                             'Login',
@@ -184,7 +182,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                     ),
                   ),
                 ),
-                // Form Section مع انيميشن منفصل وتأخير
+
                 SlideTransition(
                   position: _formSlideAnimation,
                   child: FadeTransition(

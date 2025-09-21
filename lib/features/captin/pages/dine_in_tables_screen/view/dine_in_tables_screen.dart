@@ -371,10 +371,16 @@ class _DineInTablesScreenContentState extends State<_DineInTablesScreenContent> 
   }
 
   void _cancelTransferMode() {
+    print("🔄 Cancelling Transfer Mode");
     setState(() {
       isTransferMode = false;
       sourceTableForTransfer = null;
     });
+    // إعادة تحديث الـ Cubit لضمان إعادة بناء الواجهة
+    final cubit = context.read<DineInTablesCubit>();
+    if (cubit.state is! DineInTablesLoaded) {
+      cubit.loadCafeData(); // إعادة تحميل البيانات لو كانت في حالة غير صحيحة
+    }
   }
 
   Future<void> _showTransferConfirmationDialog(
@@ -499,8 +505,8 @@ class _DineInTablesScreenContentState extends State<_DineInTablesScreenContent> 
                         Expanded(
                           child: TextButton(
                             onPressed: () {
-                              Navigator.pop(dialogContext);
-                              _cancelTransferMode(); // إرجاع الوضع العادي عند الضغط على Cancel
+                              _cancelTransferMode(); // إلغاء وضع الـ Transfer
+                              Navigator.pop(dialogContext); // إغلاق الديالوج
                             },
                             child: Text(
                               'Cancel',
@@ -990,9 +996,9 @@ class _DineInTablesScreenContentState extends State<_DineInTablesScreenContent> 
                         padding: EdgeInsets.symmetric(vertical: 10.h),
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: crossAxisCount > 0 ? crossAxisCount : 1,
-                          crossAxisSpacing: 2.w,
+                          crossAxisSpacing: 2.5.w,
                           mainAxisSpacing: 8.h,
-                          childAspectRatio: 1.0,
+                          childAspectRatio: 0.92,
                         ),
                         itemCount: filteredTables.length,
                         itemBuilder: (context, index) {
@@ -1052,7 +1058,7 @@ class _DineInTablesScreenContentState extends State<_DineInTablesScreenContent> 
                                       : AppColors.white.withOpacity(0.7),
                                   border: isTransferMode && isAvailableForTransfer
                                       ? Border.all(
-                                      color: AppColors.lightGreen, width: 2)
+                                      color: AppColors.blue.withOpacity(0.7), width: 2)
                                       : null,
                                 ),
                                 padding: EdgeInsets.all(12.r),
@@ -1061,9 +1067,8 @@ class _DineInTablesScreenContentState extends State<_DineInTablesScreenContent> 
                                   mainAxisAlignment:
                                   MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.end,
                                       children: [
                                         Text(
                                           table.tableNumber,
@@ -1078,7 +1083,7 @@ class _DineInTablesScreenContentState extends State<_DineInTablesScreenContent> 
                                           Container(
                                             padding: EdgeInsets.all(4.r),
                                             decoration: BoxDecoration(
-                                              color: AppColors.lightGreen,
+                                              color: AppColors.blue.withOpacity(0.7),
                                               shape: BoxShape.circle,
                                             ),
                                             child: Icon(
@@ -1113,6 +1118,7 @@ class _DineInTablesScreenContentState extends State<_DineInTablesScreenContent> 
                                                 uiStatus.capitalize(),
                                                 style: GoogleFonts.inter(
                                                   fontSize: 14.sp,
+                                                  fontWeight: FontWeight.w600,
                                                   color: textColor,
                                                 ),
                                               ),
