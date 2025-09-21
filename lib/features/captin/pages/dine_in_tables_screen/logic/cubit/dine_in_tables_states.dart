@@ -47,12 +47,29 @@ class DineInTablesCheckoutSuccess extends DineInTablesState {
     required this.message,
   });
 }
-class GetTableOrderLoading extends DineInTablesState{}
-class GetTableOrderError extends DineInTablesState{
+
+// Transfer Order States
+class DineInTablesTransferSuccess extends DineInTablesState {
+  final String message;
+  final int tableId;
+  final List<int> cartIds;
+
+  DineInTablesTransferSuccess({
+    required this.message,
+    required this.tableId,
+    required this.cartIds,
+  });
+}
+
+// Get Table Order States
+class GetTableOrderLoading extends DineInTablesState {}
+
+class GetTableOrderError extends DineInTablesState {
   String message;
   GetTableOrderError({required this.message});
 }
-class GetTableOrderSuccess extends DineInTablesState{
+
+class GetTableOrderSuccess extends DineInTablesState {
   GetTableOrderModel tableOrderModel;
   GetTableOrderSuccess({required this.tableOrderModel});
 }
