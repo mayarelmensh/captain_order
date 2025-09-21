@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:food_2_go/features/waiter/pages/home_screen/view/order_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
-
 import '../../../../../core/utils/app_colors.dart';
 import '../../../../../core/utils/app_routes.dart';
 import '../../../../auth/login/logic/cubit/login_cubit.dart';
@@ -403,8 +402,20 @@ class _DineInTablesScreenContentState extends State<_DineInTablesScreenContent> 
   @override
   void initState() {
     super.initState();
-    // تحديث LoginCubit للتأكد من أحدث البيانات
-    context.read<LoginCubit>().refreshUI();
+
+    // تأكد من تحديث الـ state بعد build الأول
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final loginCubit = context.read<LoginCubit>();
+      print('🔄 Checking LoginCubit state after build...');
+      print('Current LoginCubit state: ${loginCubit.state}');
+      print('LoginResponse: ${loginCubit.loginResponse}');
+      print('Waiter value from LoginResponse: ${loginCubit.loginResponse?.captainOrder?.waiter}');
+
+      // فرض تحديث الـ UI إذا لزم الأمر
+      if (mounted) {
+        setState(() {});
+      }
+    });
   }
 
   // Function to render the main content based on selected role
@@ -697,172 +708,181 @@ class _DineInTablesScreenContentState extends State<_DineInTablesScreenContent> 
 
   @override
   Widget build(BuildContext context) {
-    return Builder(
-      builder: (context) {
-        final loginCubit = context.watch<LoginCubit>();
+    return BlocListener<LoginCubit, LoginState>(
+      listener: (context, loginState) {
+        print('🔄 LoginCubit state changed: $loginState');
+        if (loginState is LoginSuccess) {
+          print('✅ Login success detected, waiter value: ${loginState.loginResponse.captainOrder?.waiter}');
+        }
+      },
+      child: Builder(
+        builder: (context) {
+          final loginResponse = context.read<LoginCubit>().loginResponse;
+          final waiterValue = loginResponse?.captainOrder?.waiter;
+          final isWaiter = waiterValue == 1;
 
-        final waiterValue = loginCubit.loginResponse?.captainOrder?.status ?? 1;
-        final isWaiter = waiterValue == 1;
+          print("🔍 Current Waiter Status Check:");
+          print("LoginResponse exists: ${loginResponse != null}");
+          print("CaptainOrder exists: ${loginResponse?.captainOrder != null}");
+          print("Raw waiter value: $waiterValue");
+          print("isWaiter (should show drawer): $isWaiter");
+          print("Selected role: $_selectedRole");
 
-        print("🔍 Waiter Status Check:");
-        print("waiter value from API: $waiterValue");
-        print("isWaiter (should show drawer): $isWaiter");
-
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(
-              _selectedRole == 'Waiter' ? 'Waiter Orders' : 'Dine-in Tables',
-              style: GoogleFonts.poppins(
-                color: AppColors.black,
-                fontSize: 28.sp,
-                fontWeight: FontWeight.w700,
+          return Scaffold(
+            appBar: AppBar(
+              title: Text(
+                _selectedRole == 'Waiter' ? 'Waiter Orders' : 'Dine-in Tables',
+                style: GoogleFonts.poppins(
+                  color: AppColors.black,
+                  fontSize: 28.sp,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              leading: isWaiter
+                  ? Builder(
+                builder: (context) => IconButton(
+                  icon: Icon(Icons.menu, color: AppColors.black, size: 28.sp),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
+              )
+                  : null,
             ),
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            // إظهار أيقونة المنيو فقط إذا كان waiter = 1
-            leading: isWaiter
-                ? Builder(
-              builder: (context) => IconButton(
-                icon: Icon(Icons.menu, color: AppColors.black, size: 28.sp),
-                onPressed: () => Scaffold.of(context).openDrawer(),
-              ),
-            )
-                : null,
-          ),
-          // إظهار الـ Drawer فقط إذا كان waiter = 1
-          drawer: isWaiter
-              ? Drawer(
-            child: Container(
-              color: Colors.white,
-              child: Column(
-                children: [
-                  Container(
-                    height: 200.h,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          AppColors.primary.withOpacity(0.8),
-                          AppColors.primary,
+            // إظهار الـ Drawer فقط إذا كان waiter = 1
+            drawer: isWaiter
+                ? Drawer(
+              child: Container(
+                color: Colors.white,
+                child: Column(
+                  children: [
+                    Container(
+                      height: 200.h,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            AppColors.primary.withOpacity(0.8),
+                            AppColors.primary,
+                          ],
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.restaurant_menu,
+                            size: 60.sp,
+                            color: AppColors.white,
+                          ),
+                          SizedBox(height: 10.h),
+                          Text(
+                            'Table Management',
+                            style: GoogleFonts.poppins(
+                              fontSize: 24.sp,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.white,
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.restaurant_menu,
-                          size: 60.sp,
-                          color: AppColors.white,
-                        ),
-                        SizedBox(height: 10.h),
-                        Text(
-                          'Table Management',
-                          style: GoogleFonts.poppins(
-                            fontSize: 24.sp,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  ListTile(
-                    leading: Icon(
-                      Icons.person,
-                      color: _selectedRole == 'Captain Order'
-                          ? AppColors.primary
-                          : AppColors.subColor,
-                    ),
-                    title: Text(
-                      'Captain Order',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16.sp,
-                        fontWeight: _selectedRole == 'Captain Order'
-                            ? FontWeight.w600
-                            : FontWeight.w500,
+                    ListTile(
+                      leading: Icon(
+                        Icons.person,
                         color: _selectedRole == 'Captain Order'
                             ? AppColors.primary
                             : AppColors.subColor,
                       ),
+                      title: Text(
+                        'Captain Order',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16.sp,
+                          fontWeight: _selectedRole == 'Captain Order'
+                              ? FontWeight.w600
+                              : FontWeight.w500,
+                          color: _selectedRole == 'Captain Order'
+                              ? AppColors.primary
+                              : AppColors.subColor,
+                        ),
+                      ),
+                      selected: _selectedRole == 'Captain Order',
+                      onTap: () {
+                        setState(() {
+                          _selectedRole = 'Captain Order';
+                        });
+                        Navigator.of(context).pop(); // إغلاق الـ drawer
+                      },
                     ),
-                    selected: _selectedRole == 'Captain Order',
-                    onTap: () {
-                      setState(() {
-                        _selectedRole = 'Captain Order';
-                      });
-                      Navigator.of(context).pop(); // إغلاق الـ drawer
-                    },
-                  ),
-                  ListTile(
-                    leading: Icon(
-                      Icons.support_agent,
-                      color: _selectedRole == 'Waiter'
-                          ? AppColors.primary
-                          : AppColors.subColor,
-                    ),
-                    title: Text(
-                      'Waiter',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16.sp,
-                        fontWeight: _selectedRole == 'Waiter'
-                            ? FontWeight.w600
-                            : FontWeight.w500,
+                    ListTile(
+                      leading: Icon(
+                        Icons.support_agent,
                         color: _selectedRole == 'Waiter'
                             ? AppColors.primary
                             : AppColors.subColor,
                       ),
+                      title: Text(
+                        'Waiter',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16.sp,
+                          fontWeight: _selectedRole == 'Waiter'
+                              ? FontWeight.w600
+                              : FontWeight.w500,
+                          color: _selectedRole == 'Waiter'
+                              ? AppColors.primary
+                              : AppColors.subColor,
+                        ),
+                      ),
+                      selected: _selectedRole == 'Waiter',
+                      onTap: () {
+                        setState(() {
+                          _selectedRole = 'Waiter';
+                        });
+                        Navigator.of(context).pop(); // إغلاق الـ drawer
+                      },
                     ),
-                    selected: _selectedRole == 'Waiter',
-                    onTap: () {
-                      setState(() {
-                        _selectedRole = 'Waiter';
-                      });
-                      Navigator.of(context).pop(); // إغلاق الـ drawer
-                    },
-                  ),
-                  Divider(),
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.bottomLeft,
-                      child: Padding(
-                        padding: EdgeInsets.all(16.r),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Current Role: $_selectedRole',
-                              style: GoogleFonts.poppins(
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.primary,
+                    Divider(),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.bottomLeft,
+                        child: Padding(
+                          padding: EdgeInsets.all(16.r),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Current Role: $_selectedRole',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primary,
+                                ),
                               ),
-                            ),
-                            SizedBox(height: 4.h),
-                            Text(
-                              'Waiter Status: ${isWaiter ? 'Active' : 'Inactive'}',
-                              style: GoogleFonts.poppins(
-                                fontSize: 12.sp,
-                                color: AppColors.subColor,
+                              SizedBox(height: 4.h),
+                              Text(
+                                'Waiter Status: ${isWaiter ? 'Active' : 'Inactive'}',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12.sp,
+                                  color: AppColors.subColor,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          )
-              : null, // لا drawer إذا كان waiter = 0
-          body: _buildMainContent(context),
-        );
-      },
+            )
+                : null, // لا drawer إذا كان waiter = 0
+            body: _buildMainContent(context),
+          );
+        },
+      ),
     );
   }
 }

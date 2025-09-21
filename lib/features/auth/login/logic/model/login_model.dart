@@ -10,7 +10,6 @@ class LoginResponse {
     final roleUser = json['user']?['role'];
     final finalRole = roleRoot ?? roleUser;
 
-
     return LoginResponse(
       captainOrder: json['user'] != null
           ? CaptainOrder.fromJson(json['user'])
@@ -39,6 +38,7 @@ class CaptainOrder {
   final String? image;
   final String? userName;
   final int? status;
+  final int? waiter; // تم إضافة هذا الحقل الجديد
   final String? role;
   final String? token;
   final String? imageLink;
@@ -53,6 +53,7 @@ class CaptainOrder {
     this.image,
     this.userName,
     this.status,
+    this.waiter, // تم إضافة هذا الحقل الجديد
     this.role,
     this.token,
     this.imageLink,
@@ -69,6 +70,7 @@ class CaptainOrder {
       image: json['image'],
       userName: json['user_name'],
       status: json['status'],
+      waiter: json['waiter'], // تم إضافة هذا الحقل الجديد
       role: json['role'],
       token: json['token'],
       imageLink: json['image_link'],
@@ -86,6 +88,7 @@ class CaptainOrder {
       'image': image,
       'user_name': userName,
       'status': status,
+      'waiter': waiter, // تم إضافة هذا الحقل الجديد
       'role': role,
       'token': token,
       'image_link': imageLink,
