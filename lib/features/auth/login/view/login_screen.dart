@@ -18,20 +18,93 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin {
   final LoginCubit loginCubit = LoginCubit();
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  // Animation Controllers
+  late AnimationController _headerAnimationController;
+  late AnimationController _formAnimationController;
+
+  // Header Animations
+  late Animation<Offset> _headerSlideAnimation;
+  late Animation<double> _headerFadeAnimation;
+
+  // Form Animations
+  late Animation<Offset> _formSlideAnimation;
+  late Animation<double> _formFadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Header Animation Controller - أسرع قليلاً
+    _headerAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    // Form Animation Controller - يبدأ بتأخير بسيط
+    _formAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    // Header Animations - يأتي من تحت بسرعة
+    _headerSlideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.8), // تغيير من 1 إلى 0.8 لحركة أخف
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _headerAnimationController,
+      curve: Curves.easeOutCubic, // منحنى أكثر سلاسة
+    ));
+
+    _headerFadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _headerAnimationController,
+      curve: Curves.easeOut,
+    ));
+
+    // Form Animations - يأتي من تحت بحركة أخف
+    _formSlideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.5), // حركة أخف للفورم
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _formAnimationController,
+      curve: Curves.easeOutQuart, // منحنى ناعم جداً
+    ));
+
+    _formFadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _formAnimationController,
+      curve: Curves.easeOut,
+    ));
+
+    // بدء الانيميشن
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _headerAnimationController.forward();
+      // تأخير بسيط قبل انيميشن الفورم لتأثير أكثر جمالاً
+      Future.delayed(const Duration(milliseconds: 200), () {
+        _formAnimationController.forward();
+      });
+    });
+  }
+
   @override
   void dispose() {
+    _headerAnimationController.dispose();
+    _formAnimationController.dispose();
     loginCubit.close();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -64,17 +137,15 @@ class _LoginScreenState extends State<LoginScreen> {
           ).showSnackBar(
               SnackBar(
                 duration: Duration(seconds: 1),
-              content: Text('Login successful!'),
-              backgroundColor: AppColors.green,
-          ));
+                content: Text('Login successful!'),
+                backgroundColor: AppColors.green,
+              ));
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (_) => RoleScreen(loginResponse: state.loginResponse,), // ✅ مرريه هنا
+              builder: (_) => RoleScreen(loginResponse: state.loginResponse,),
             ),
           );
-          // Navigate to home or next screen
-          // Navigator.pushReplacementNamed(context, AppRoutes.homeScreen);
         }
       },
       builder: (context, state) {
@@ -83,107 +154,119 @@ class _LoginScreenState extends State<LoginScreen> {
           body: SingleChildScrollView(
             child: Column(
               children: [
-                // Logo and Welcome Text
-                Column(
-                  children: [
-                    Container(
-                      width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.only(
-                            bottomLeft: Radius.circular(70.r),
-                            bottomRight: Radius.circular(70.r),
-                          ),
-                        ),
-                        child: Image.asset('assets/images/Frame 4.png', )),
-                    SizedBox(height: 8.h),
-                    Text(
-                      'Login',
-                      style:GoogleFonts.poppins(
-                        fontSize: 24.sp,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black,
-                      )
-                    ),
-                  ],
-                ),
-                // Form Section
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 10.w),
-                  child: Form(
-                    key: _formKey,
+                // Header Section مع انيميشن منفصل
+                SlideTransition(
+                  position: _headerSlideAnimation,
+                  child: FadeTransition(
+                    opacity: _headerFadeAnimation,
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        SizedBox(height: 20.h),
-                        // Email Field
-                        Text(
-                          'Email/User name',
-                          style: GoogleFonts.poppins(
-                            fontSize: 13.sp,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.black,)
-                        ),
-                        SizedBox(height: 8.h),
-                        CustomTextFormField(
-                          hintText: "Enter Your Email",
-                          hintStyle:  GoogleFonts.poppins(
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.subColor,),
-                          borderColor: AppColors.subColor,
-                          controller: _emailController,
-                        ),
-                        SizedBox(height: 20.h),
-                        // Password Field
-                        Text(
-                          'Password',
-                          style:  GoogleFonts.poppins(
-                            fontSize: 13.sp,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.black,),
-                        ),
-                        SizedBox(height: 8.h),
-                        CustomTextFormField(
-                          isObscureText: loginCubit.isPasswordObscure,
-                          hintText: "Enter Your Password",
-                          hintStyle: GoogleFonts.poppins(
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.subColor,),
-                          borderColor: AppColors.subColor,
-                          controller: _passwordController, // ربط الـ controller
-                          suffixIcon: IconButton(
-                            onPressed: () {
-                              loginCubit.togglePasswordVisibility();
-                            },
-                            icon: Icon(
-                              loginCubit.isPasswordObscure
-                                  ? Icons.visibility_off
-                                  : Icons.visibility,
-                              color: AppColors.subColor,
-                              size: 20.sp,
+                        Container(
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              borderRadius: BorderRadius.only(
+                                bottomLeft: Radius.circular(70.r),
+                                bottomRight: Radius.circular(70.r),
+                              ),
                             ),
-                          ),
-                        ),
-                        SizedBox(height: 25.h),
-                        // Login Button
-                        CustomElevatedButton(
-                          text: "Login",
-                          onPressed: () {
-                              loginCubit.login(
-                                _emailController.text,
-                                _passwordController.text,
-                              );
-                          },
-                          backgroundColor: AppColors.primary,
-                          textStyle: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14.sp,
-                            color: AppColors.white,
-                          )
+                            child: Image.asset('assets/images/Frist Screen.png', )),
+                        SizedBox(height: 8.h),
+                        Text(
+                            'Login',
+                            style:GoogleFonts.poppins(
+                              fontSize: 24.sp,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black,
+                            )
                         ),
                       ],
+                    ),
+                  ),
+                ),
+                // Form Section مع انيميشن منفصل وتأخير
+                SlideTransition(
+                  position: _formSlideAnimation,
+                  child: FadeTransition(
+                    opacity: _formFadeAnimation,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 10.w),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            SizedBox(height: 20.h),
+                            // Email Field
+                            Text(
+                                'Email/User name',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13.sp,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.black,)
+                            ),
+                            SizedBox(height: 8.h),
+                            CustomTextFormField(
+                              hintText: "Enter Your Email",
+                              hintStyle:  GoogleFonts.poppins(
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.subColor,),
+                              borderColor: AppColors.subColor,
+                              controller: _emailController,
+                            ),
+                            SizedBox(height: 20.h),
+                            // Password Field
+                            Text(
+                              'Password',
+                              style:  GoogleFonts.poppins(
+                                fontSize: 13.sp,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.black,),
+                            ),
+                            SizedBox(height: 8.h),
+                            CustomTextFormField(
+                              isObscureText: loginCubit.isPasswordObscure,
+                              hintText: "Enter Your Password",
+                              hintStyle: GoogleFonts.poppins(
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.subColor,),
+                              borderColor: AppColors.subColor,
+                              controller: _passwordController,
+                              suffixIcon: IconButton(
+                                onPressed: () {
+                                  loginCubit.togglePasswordVisibility();
+                                },
+                                icon: Icon(
+                                  loginCubit.isPasswordObscure
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                  color: AppColors.subColor,
+                                  size: 20.sp,
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: 25.h),
+                            // Login Button
+                            CustomElevatedButton(
+                                text: "Login",
+                                onPressed: () {
+                                  loginCubit.login(
+                                    _emailController.text,
+                                    _passwordController.text,
+                                  );
+                                },
+                                backgroundColor: AppColors.primary,
+                                textStyle: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14.sp,
+                                  color: AppColors.white,
+                                )
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
