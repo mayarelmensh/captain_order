@@ -56,6 +56,7 @@ class _GetTableOrderScreenState extends State<GetTableOrderScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        centerTitle: true,
         title: Text(
           'Table $tableNumber Orders',
           textAlign: TextAlign.center,
