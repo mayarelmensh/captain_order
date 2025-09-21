@@ -17,8 +17,9 @@ class _GetTableOrderScreenState extends State<GetTableOrderScreen> {
   String? tableNumber;
   String? area;
   int? tableId;
-  String? selectedStatus; // متغير لحفظ الخيار المؤقت
-  bool _loaded = false; // لمنع إعادة التحميل
+  bool _loaded = false;
+
+  Map<int, String?> selectedStatuses = {};
 
   @override
   void didChangeDependencies() {
@@ -46,13 +47,18 @@ class _GetTableOrderScreenState extends State<GetTableOrderScreen> {
     }
   }
 
+  String getValidStatus(String? status) {
+    const validStatuses = ['preparing', 'done', 'pick_up'];
+    return validStatuses.contains(status) ? status! : 'preparing';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          textAlign: TextAlign.center,
           'Table $tableNumber Orders',
+          textAlign: TextAlign.center,
           style: GoogleFonts.poppins(
             fontSize: 22.sp,
             fontWeight: FontWeight.w600,
@@ -60,9 +66,11 @@ class _GetTableOrderScreenState extends State<GetTableOrderScreen> {
           ),
         ),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.black),
+          icon: Icon(Icons.arrow_back, color: Colors.black, size: 24.sp),
           onPressed: () => Navigator.pop(context),
         ),
+        elevation: 0,
+        backgroundColor: Colors.white,
       ),
       body: Container(
         decoration: BoxDecoration(
@@ -76,28 +84,67 @@ class _GetTableOrderScreenState extends State<GetTableOrderScreen> {
           builder: (context, state) {
             print("Current State: $state");
             if (state is GetTableOrderLoading) {
-              return Center(child: CircularProgressIndicator(color: AppColors.primary));
+              return Center(
+                child: CircularProgressIndicator(color: AppColors.primary),
+              );
             } else if (state is GetTableOrderError) {
               return Center(
-                child: Text(
-                  state.message,
-                  style: GoogleFonts.poppins(
-                    fontSize: 16.sp,
-                    color: AppColors.red,
-                  ),
-                  textAlign: TextAlign.center,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      state.message,
+                      style: GoogleFonts.poppins(
+                        fontSize: 16.sp,
+                        color: AppColors.red,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 16.h),
+                    ElevatedButton(
+                      onPressed: () {
+                        final cubit = context.read<DineInTablesCubit>();
+                        cubit.getTableOrder(tableId: tableId!);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10.r),
+                        ),
+                        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                      ),
+                      child: Text(
+                        'Retry',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14.sp,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               );
             } else if (state is GetTableOrderSuccess) {
               final tableOrder = state.tableOrderModel;
               if (tableOrder.orders.isEmpty) {
-                return Center(child: Text('No orders available'));
+                return Center(
+                  child: Text(
+                    'No orders available',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16.sp,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                );
               }
               return ListView.builder(
                 padding: EdgeInsets.all(12.w),
                 itemCount: tableOrder.orders.length,
                 itemBuilder: (context, index) {
                   final order = tableOrder.orders[index];
+                  final validStatus = getValidStatus(order.prepration);
+                  final currentStatus = selectedStatuses[order.cartId] ?? validStatus;
+
                   return Card(
                     color: AppColors.borderColor,
                     elevation: 0.2,
@@ -126,8 +173,11 @@ class _GetTableOrderScreenState extends State<GetTableOrderScreen> {
                                 width: 70.w,
                                 height: 70.h,
                                 fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    Icon(Icons.fastfood, size: 40.w, color: Colors.grey),
+                                errorBuilder: (context, error, stackTrace) => Icon(
+                                  Icons.fastfood,
+                                  size: 40.w,
+                                  color: Colors.grey,
+                                ),
                               ),
                             ),
                             SizedBox(width: 12.w),
@@ -145,7 +195,7 @@ class _GetTableOrderScreenState extends State<GetTableOrderScreen> {
                                   ),
                                   SizedBox(height: 4.h),
                                   Text(
-                                    'Preparation: ${order.prepration}',
+                                    'Preparation: $currentStatus',
                                     style: GoogleFonts.poppins(
                                       fontSize: 14.sp,
                                       color: Colors.grey[700],
@@ -181,7 +231,7 @@ class _GetTableOrderScreenState extends State<GetTableOrderScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Container(
-                                  width: 120.w,
+                                  width: MediaQuery.of(context).size.width * 0.3,
                                   padding: EdgeInsets.symmetric(horizontal: 8.w),
                                   decoration: BoxDecoration(
                                     border: Border.all(color: AppColors.primary, width: 0.5),
@@ -190,7 +240,7 @@ class _GetTableOrderScreenState extends State<GetTableOrderScreen> {
                                   ),
                                   child: DropdownButtonHideUnderline(
                                     child: DropdownButton<String>(
-                                      value: selectedStatus ?? order.prepration,
+                                      value: currentStatus,
                                       hint: Text(
                                         'Select Status',
                                         style: GoogleFonts.poppins(
@@ -198,13 +248,14 @@ class _GetTableOrderScreenState extends State<GetTableOrderScreen> {
                                           color: Colors.grey[600],
                                         ),
                                       ),
-                                      items: ['preparing', 'done', 'pick_up', ].map((String value) {
+                                      items: ['preparing', 'done', 'pick_up'].map((String value) {
                                         return DropdownMenuItem<String>(
                                           value: value,
                                           child: Text(
                                             value,
                                             style: GoogleFonts.poppins(
-                                              fontSize: 12.sp,
+                                              fontSize: 14.sp,
+                                              fontWeight: FontWeight.w600,
                                               color: AppColors.primary,
                                             ),
                                           ),
@@ -213,21 +264,24 @@ class _GetTableOrderScreenState extends State<GetTableOrderScreen> {
                                       onChanged: (String? newValue) {
                                         if (newValue != null) {
                                           setState(() {
-                                            selectedStatus = newValue;
+                                            selectedStatuses[order.cartId!] = newValue;
                                           });
                                         }
                                       },
-                                      icon: Icon(Icons.arrow_drop_down, color: AppColors.primary),
+                                      icon: Icon(Icons.arrow_drop_down, color: AppColors.primary, size: 20.sp),
+                                      isExpanded: true,
                                     ),
                                   ),
                                 ),
                                 SizedBox(height: 8.h),
                                 ElevatedButton(
-                                  onPressed: selectedStatus != null && order.cartId != null
+                                  onPressed: selectedStatuses[order.cartId] != null &&
+                                      order.cartId != null
                                       ? () {
-                                    _updateStatus(order.cartId!, selectedStatus!);
+                                    _updateStatus(
+                                        order.cartId!, selectedStatuses[order.cartId]!);
                                     setState(() {
-                                      selectedStatus = null; // إعادة تعيين بعد التأكيد
+                                      selectedStatuses.remove(order.cartId);
                                     });
                                   }
                                       : null,
@@ -258,10 +312,7 @@ class _GetTableOrderScreenState extends State<GetTableOrderScreen> {
               );
             }
             return Center(
-              child: Text(
-                'Loading initial data...',
-                style: GoogleFonts.poppins(fontSize: 16.sp, color: Colors.grey[700]),
-              ),
+              child: CircularProgressIndicator(color: AppColors.primary),
             );
           },
         ),

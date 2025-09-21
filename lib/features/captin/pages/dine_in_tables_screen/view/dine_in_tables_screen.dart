@@ -110,8 +110,8 @@ class _DineInTablesScreenContentState extends State<_DineInTablesScreenContent> 
     'available': AppColors.darkGrey,
     'paid': AppColors.darkGrey,
     'dining': AppColors.darkGrey,
-    'waiting': AppColors.white,
-    'reserved': AppColors.white,
+    'waiting': AppColors.black,
+    'reserved': AppColors.pink,
     'default': AppColors.black,
   };
 
@@ -990,7 +990,7 @@ class _DineInTablesScreenContentState extends State<_DineInTablesScreenContent> 
                         padding: EdgeInsets.symmetric(vertical: 10.h),
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: crossAxisCount > 0 ? crossAxisCount : 1,
-                          crossAxisSpacing: 8.w,
+                          crossAxisSpacing: 2.w,
                           mainAxisSpacing: 8.h,
                           childAspectRatio: 1.0,
                         ),

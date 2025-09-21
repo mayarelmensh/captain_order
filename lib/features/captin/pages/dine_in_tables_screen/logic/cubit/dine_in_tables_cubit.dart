@@ -218,30 +218,53 @@ class DineInTablesCubit extends Cubit<DineInTablesState> {
     emit(GetTableOrderLoading());
     try {
       await SharedPreferenceUtils.init();
-      final token = SharedPreferenceUtils.getData(key: 'token') as String;
+      final token = SharedPreferenceUtils.getData(key: 'token') as String?;
+
+      if (token == null || token.isEmpty) {
+        emit(GetTableOrderError(message: 'No valid token found. Please log in again.'));
+        return;
+      }
 
       final response = await DioHelper.getData(
         url: '/captain/dine_in_table_order/$tableId',
         token: token,
-      );
+      ).timeout(Duration(seconds: 10), onTimeout: () {
+        throw Exception('Request timed out');
+      });
 
       print("📋 Table Order Response: ${response.data}");
 
       if (response.statusCode == 200 && response.data != null) {
-        final jsonData = response.data;
-        if (jsonData['success'] != null && jsonData['success'] is List) {
+        final jsonData = response.data is Map ? response.data : {};
+
+        // Check if 'success' key exists and is a List
+        if (jsonData.containsKey('success') && jsonData['success'] is List) {
           final orders = (jsonData['success'] as List)
-              .map((item) => TableOrder.fromJson(item as Map<String, dynamic>))
+              .map((item) {
+            if (item is Map<String, dynamic>) {
+              return TableOrder.fromJson(item);
+            } else {
+              print("⚠️ Invalid order item format: $item");
+              return null;
+            }
+          })
+              .where((item) => item != null)
+              .cast<TableOrder>()
               .toList();
+
           final tableOrderModel = GetTableOrderModel(orders: orders);
           print("✅ Parsed Orders Count: ${tableOrderModel.orders.length}");
           print("✅ Parsed Orders: $orders");
           emit(GetTableOrderSuccess(tableOrderModel: tableOrderModel));
         } else {
-          emit(GetTableOrderError(message: 'Invalid response format: No "success" array found'));
+          final message = jsonData['message'] ?? 'Invalid response format: No valid "success" array found';
+          print("❌ Invalid response: $message");
+          emit(GetTableOrderError(message: message));
         }
       } else {
-        emit(GetTableOrderError(message: 'Failed to load table orders (Status: ${response.statusCode})'));
+        final message = 'Failed to load table orders (Status: ${response.statusCode})';
+        print("❌ $message");
+        emit(GetTableOrderError(message: message));
       }
     } catch (e, stackTrace) {
       print("⚠️ Get Table Order Exception: $e");
@@ -249,7 +272,6 @@ class DineInTablesCubit extends Cubit<DineInTablesState> {
       emit(GetTableOrderError(message: 'Error loading table orders: $e'));
     }
   }
-
   Future<void> updateOrderStatus({
     required int tableId,
     required int cartId,
