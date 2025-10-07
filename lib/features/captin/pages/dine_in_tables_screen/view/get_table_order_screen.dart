@@ -52,6 +52,47 @@ class _GetTableOrderScreenState extends State<GetTableOrderScreen> {
     return validStatuses.contains(status) ? status! : 'preparing';
   }
 
+  // Widget to handle image loading with retry
+  Widget _buildImage(String? imageUrl) {
+    return Image.network(
+      imageUrl ?? '',
+      width: 70.w,
+      height: 70.h,
+      fit: BoxFit.cover,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child; // Image is loaded
+        return SizedBox(
+          width: 70.w,
+          height: 70.h,
+          child: Center(
+            child: CircularProgressIndicator(
+              color: AppColors.primary,
+              strokeWidth: 2.0,
+            ),
+          ),
+        );
+      },
+      errorBuilder: (context, error, stackTrace) {
+        // Retry loading after a delay if the image fails to load
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            setState(() {}); // Trigger rebuild to retry image loading
+          }
+        });
+        return SizedBox(
+          width: 70.w,
+          height: 70.h,
+          child: Center(
+            child: CircularProgressIndicator(
+              color: AppColors.primary,
+              strokeWidth: 2.0,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -94,7 +135,7 @@ class _GetTableOrderScreenState extends State<GetTableOrderScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      state.message,
+                      "something went wrong ,please try again",
                       style: GoogleFonts.poppins(
                         fontSize: 16.sp,
                         color: AppColors.red,
@@ -169,17 +210,7 @@ class _GetTableOrderScreenState extends State<GetTableOrderScreen> {
                           children: [
                             ClipRRect(
                               borderRadius: BorderRadius.circular(10.r),
-                              child: Image.network(
-                                order.imageLink ?? '',
-                                width: 70.w,
-                                height: 70.h,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => Icon(
-                                  Icons.fastfood,
-                                  size: 40.w,
-                                  color: Colors.grey,
-                                ),
-                              ),
+                              child: _buildImage(order.imageLink),
                             ),
                             SizedBox(width: 12.w),
                             Expanded(
@@ -233,7 +264,7 @@ class _GetTableOrderScreenState extends State<GetTableOrderScreen> {
                               children: [
                                 Container(
                                   width: MediaQuery.of(context).size.width * 0.3,
-                                  padding: EdgeInsets.symmetric(horizontal: 8.w),
+                                  padding: EdgeInsets.symmetric(horizontal: 12.w),
                                   decoration: BoxDecoration(
                                     border: Border.all(color: AppColors.primary, width: 0.5),
                                     borderRadius: BorderRadius.circular(10.r),
@@ -255,7 +286,7 @@ class _GetTableOrderScreenState extends State<GetTableOrderScreen> {
                                           child: Text(
                                             value,
                                             style: GoogleFonts.poppins(
-                                              fontSize: 14.sp,
+                                              fontSize: 12.sp,
                                               fontWeight: FontWeight.w600,
                                               color: AppColors.primary,
                                             ),

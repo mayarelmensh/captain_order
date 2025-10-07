@@ -36,12 +36,19 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            keyAlias = "key" // غيّري حسب الـ alias اللي شايفاه
+            keyPassword = "123456789" // كلمة المرور بتاعت الـ Key
+            storeFile = file("key.jks") // تأكدي إن المسار صحيح من مجلد app
+            storePassword = "123456789" // كلمة المرور بتاعت الـ Keystore
+        }
+    }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
+            // حذف minifyEnabled وshrinkResources لأنهم مش ضروريين دلوقتي
         }
     }
 }
@@ -53,10 +60,6 @@ flutter {
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.0")
     implementation("androidx.core:core-ktx:1.13.1")
-    // 👇 Firebase BOM (علشان تمسكي كل الإصدارات متوافقة)
     implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
-
-    // 👇 Firebase Messaging (لـ FCM)
     implementation("com.google.firebase:firebase-messaging")
-    // أضيفي أي تبعيات إضافية هنا لو محتاجة (زي Firebase أو dio)
 }

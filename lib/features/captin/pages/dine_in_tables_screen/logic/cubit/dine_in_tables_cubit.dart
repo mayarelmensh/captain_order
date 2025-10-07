@@ -180,7 +180,7 @@ class DineInTablesCubit extends Cubit<DineInTablesState> {
       print("🛒 Checkout Request Response: ${response.data}");
 
       if (response.statusCode == 200) {
-        final successMessage = response.data['success'] as String?; // خذ الـ success كـ String
+        final successMessage = response.data['success'] as String?;
         if (successMessage != null && successMessage.toLowerCase().contains('success')) {
           print("✅ Checkout request sent successfully for table $tableId");
           emit(DineInTablesCheckoutSuccess(
@@ -272,6 +272,7 @@ class DineInTablesCubit extends Cubit<DineInTablesState> {
       emit(GetTableOrderError(message: 'Error loading table orders: $e'));
     }
   }
+
   Future<void> updateOrderStatus({
     required int tableId,
     required int cartId,
@@ -307,10 +308,10 @@ class DineInTablesCubit extends Cubit<DineInTablesState> {
 
   // Transfer order from one table to another and update status
   Future<bool> transferOrder({
-    required int sourceTableId, // 🔥 Added source table ID
-    required int destinationTableId, // 🔥 Renamed for clarity
+    required int sourceTableId,
+    required int destinationTableId,
     required List<int> cartIds,
-    String newStatus = "available", // Default status after transfer
+    String newStatus = "available",
   }) async {
     emit(DineInTablesLoading());
     try {
@@ -320,7 +321,7 @@ class DineInTablesCubit extends Cubit<DineInTablesState> {
       // Prepare form data according to API requirements - using correct field name
       Map<String, dynamic> formData = {
         'table_id': destinationTableId,
-        'cart_ids': cartIds, // 🔥 Fixed: Use cart_ids directly as array
+        'cart_ids': cartIds,
       };
 
       print("📋 Transfer Data Being Sent: $formData");
@@ -344,7 +345,7 @@ class DineInTablesCubit extends Cubit<DineInTablesState> {
 
           // تحديث status الطاولة المصدر بعد نجاح التحويل
           bool statusUpdated = await updateTableStatus(
-              tableId: sourceTableId, // 🔥 Update source table status
+              tableId: sourceTableId,
               newStatus: newStatus
           );
 
@@ -355,8 +356,7 @@ class DineInTablesCubit extends Cubit<DineInTablesState> {
           }
 
           // 🔥 IMPORTANT: Return to main loaded state instead of transfer success
-          // This prevents the white screen issue
-          await loadCafeData(); // This will emit DineInTablesLoaded state
+          await loadCafeData();
           return true;
         } else {
           final errorMessage = response.data['message'] ?? 'Transfer failed for unknown reason';
@@ -381,8 +381,8 @@ class DineInTablesCubit extends Cubit<DineInTablesState> {
 
   // Helper method to transfer single cart item with custom status
   Future<bool> transferSingleOrder({
-    required int sourceTableId, // 🔥 Added source table ID
-    required int destinationTableId, // 🔥 Added destination table ID
+    required int sourceTableId,
+    required int destinationTableId,
     required int cartId,
     String newStatus = "available",
   }) async {
@@ -396,8 +396,8 @@ class DineInTablesCubit extends Cubit<DineInTablesState> {
 
   // Helper method to transfer multiple cart items with custom status
   Future<bool> transferMultipleOrders({
-    required int sourceTableId, // 🔥 Added source table ID
-    required int destinationTableId, // 🔥 Added destination table ID
+    required int sourceTableId,
+    required int destinationTableId,
     required List<int> cartIds,
     String newStatus = "available",
   }) async {
@@ -414,6 +414,96 @@ class DineInTablesCubit extends Cubit<DineInTablesState> {
     );
   }
 
+  // Merge tables
+  Future<bool> mergeTables({
+    required int tableId,
+    required List<int> mergeTableIds,
+  }) async {
+    emit(DineInTablesLoading());
+    try {
+      await SharedPreferenceUtils.init();
+      final token = SharedPreferenceUtils.getData(key: 'token') as String;
+
+      final response = await DioHelper.postData(
+        url: '/captain/merge_table',
+        data: {
+          'table_id': tableId,
+          'merge_tables_ids': mergeTableIds,
+        },
+        token: token,
+      );
+
+      print("🔗 Merge Tables Response: ${response.data}");
+
+      if (response.statusCode == 200 && response.data != null) {
+        final successMessage = response.data['success'] as String?;
+        if (successMessage != null && successMessage.isNotEmpty) {
+          print("✅ Tables merged successfully: $successMessage");
+          await loadCafeData(); // Refresh data to reflect merged tables
+          return true;
+        } else {
+          final errorMessage = response.data['message'] ?? 'Merge failed for unknown reason';
+          print("❌ Merge failed: $errorMessage");
+          emit(DineInTablesError('Merge failed: $errorMessage'));
+          return false;
+        }
+      } else {
+        print("❌ Failed to merge tables: Status ${response.statusCode}");
+        emit(DineInTablesError(
+            'Failed to merge tables (Status: ${response.statusCode})'));
+        return false;
+      }
+    } catch (e, stackTrace) {
+      print("⚠️ Merge Tables Exception: $e");
+      print("📍 Stack Trace: $stackTrace");
+      emit(DineInTablesError('Error merging tables: $e'));
+      return false;
+    }
+  }
+
+  // Unmerge tables
+  Future<bool> unmergeTable({required int tableId}) async {
+    emit(DineInTablesLoading());
+    try {
+      await SharedPreferenceUtils.init();
+      final token = SharedPreferenceUtils.getData(key: 'token') as String;
+
+      final response = await DioHelper.postData(
+        url: '/captain/split_table',
+        data: {
+          'table_id': tableId,
+        },
+        token: token,
+      );
+
+      print("🔗 Unmerge Tables Response: ${response.data}");
+
+      if (response.statusCode == 200 && response.data != null) {
+        final successMessage = response.data['success'] as String?;
+        if (successMessage != null && successMessage.isNotEmpty) {
+          print("✅ Tables unmerged successfully: $successMessage");
+          await loadCafeData(); // Refresh data to reflect unmerged tables
+          return true;
+        } else {
+          final errorMessage = response.data['message'] ?? 'Unmerge failed for unknown reason';
+          print("❌ Unmerge failed: $errorMessage");
+          emit(DineInTablesError('Unmerge failed: $errorMessage'));
+          return false;
+        }
+      } else {
+        print("❌ Failed to unmerge tables: Status ${response.statusCode}");
+        emit(DineInTablesError(
+            'Failed to unmerge tables (Status: ${response.statusCode})'));
+        return false;
+      }
+    } catch (e, stackTrace) {
+      print("⚠️ Unmerge Tables Exception: $e");
+      print("📍 Stack Trace: $stackTrace");
+      emit(DineInTablesError('Error unmerging tables: $e'));
+      return false;
+    }
+  }
+
   // Get filtered tables based on selected location
   List<TableModel> getFilteredTables() {
     final currentState = state;
@@ -428,8 +518,7 @@ class DineInTablesCubit extends Cubit<DineInTablesState> {
       // Specific location
       try {
         return currentState.cafeResponse.cafeLocation
-            .firstWhere(
-                (loc) => loc.id == currentState.selectedLocationIndex)
+            .firstWhere((loc) => loc.id == currentState.selectedLocationIndex)
             .tables;
       } catch (e) {
         print("⚠️ Filter Error: $e");

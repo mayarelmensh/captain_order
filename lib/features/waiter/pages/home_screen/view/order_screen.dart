@@ -3,29 +3,37 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../../../../core/utils/app_colors.dart';
+import '../../../../../core/utils/app_routes.dart';
+import '../../../../auth/login/logic/cubit/login_cubit.dart';
 import '../logic/cubit/order_cubit.dart';
 import '../logic/cubit/order_state.dart';
 import '../logic/model/order_list.dart';
 import 'order_details_screen.dart';
 
 class OrderScreen extends StatelessWidget {
-   OrderScreen({super.key});
+  OrderScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => OrderCubit()..getOrders(),
-      child:  OrderView(),
+      child: OrderView(),
     );
   }
 }
 
-class OrderView extends StatelessWidget {
-   OrderView({super.key});
+class OrderView extends StatefulWidget {
+  OrderView({super.key});
 
+  @override
+  _OrderViewState createState() => _OrderViewState();
+}
+
+class _OrderViewState extends State<OrderView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -50,7 +58,7 @@ class OrderView extends StatelessWidget {
             child: Container(
               color: Colors.white.withOpacity(0.1),
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3), // Reduced blur intensity
+                filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
                 child: Container(),
               ),
             ),
@@ -101,6 +109,102 @@ class OrderView extends StatelessWidget {
           ],
         ),
         actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 5),
+            child: IconButton(
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  barrierDismissible: true,
+                  builder: (BuildContext dialogContext) {
+                    return AlertDialog(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20.r),
+                      ),
+                      title: Text(
+                        'Confirm Logout',
+                        style: GoogleFonts.poppins(
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.black,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      content: Text(
+                        'Are you sure you want to log out?',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14.sp,
+                          color: AppColors.subColor,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(dialogContext),
+                          child: Text(
+                            'Cancel',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.subColor,
+                            ),
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: () async {
+                            try {
+                              // ✅ أقفل الـ dialog الأول
+                              Navigator.pop(dialogContext);
+
+                              // ✅ أقفل الـ OrderScreen وامسحها من الـ stack
+                              Navigator.pushNamedAndRemoveUntil(
+                                context,
+                                AppRoutes.loginRoute,
+                                    (Route<dynamic> route) => false,
+                              );
+
+                              // ✅ بعد كده اعمل logout (مش قبل!)
+                              final loginCubit = context.read<LoginCubit>();
+                              await loginCubit.logout();
+
+                            } catch (e) {
+                              print("⚠️ Logout error: $e");
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error logging out: $e'),
+                                    backgroundColor: Colors.red,
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 8.w),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                          ),
+                          child: Text(
+                            'Logout',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
+              icon: const Icon(Icons.logout),
+              iconSize: 20,
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: IconButton(
@@ -199,7 +303,7 @@ class LoadingWidget extends StatelessWidget {
             baseColor: AppColors.grey.withOpacity(0.3),
             highlightColor: AppColors.grey.withOpacity(0.1),
             child: const CircularProgressIndicator(color: AppColors.primary),
-          ).animate().fadeIn(duration: 400.ms), // Simplified animation
+          ).animate().fadeIn(duration: 400.ms),
           const SizedBox(height: 16),
           Text(
             'Loading orders...',
@@ -273,7 +377,7 @@ class ErrorMessageWidget extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-            ).animate().fadeIn(duration: 400.ms), // Simplified animation
+            ).animate().fadeIn(duration: 400.ms),
           ],
         ),
       ),
@@ -304,7 +408,7 @@ class EmptyOrdersWidget extends StatelessWidget {
                 color: AppColors.primary,
                 size: 40,
               ),
-            ).animate().fadeIn(duration: 400.ms), // Simplified animation
+            ).animate().fadeIn(duration: 400.ms),
             const SizedBox(height: 16),
             Text(
               'No orders available',
@@ -356,7 +460,7 @@ class OrderListWidget extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05), // Reduced shadow intensity
+                    color: Colors.black.withOpacity(0.05),
                     blurRadius: 8,
                     spreadRadius: 1,
                   ),
@@ -365,7 +469,7 @@ class OrderListWidget extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3), // Reduced blur intensity
+                  filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
@@ -376,10 +480,7 @@ class OrderListWidget extends StatelessWidget {
                       children: [
                         Container(
                           padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.1),
-                            shape: BoxShape.circle,
-                          ),
+
                           child: const Icon(
                             Icons.receipt_long,
                             color: AppColors.primary,
@@ -400,16 +501,16 @@ class OrderListWidget extends StatelessWidget {
                   ),
                 ),
               ),
-            ).animate().fadeIn(duration: 400.ms), // Simplified animation
+            ).animate().fadeIn(duration: 400.ms),
             Expanded(
               child: ListView.builder(
-                physics: const ClampingScrollPhysics(), // Smoother scrolling
+                physics: const ClampingScrollPhysics(),
                 padding: const EdgeInsets.only(top: 16),
                 itemCount: orders.length,
                 itemBuilder: (context, index) {
                   return OrderCard(order: orders[index])
                       .animate()
-                      .fadeIn(duration: 400.ms, delay: (100 * index).ms); // Lighter staggered animation
+                      .fadeIn(duration: 400.ms, delay: (100 * index).ms);
                 },
               ),
             ),
@@ -452,7 +553,7 @@ class OrderCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05), // Reduced shadow intensity
+                color: Colors.black.withOpacity(0.05),
                 blurRadius: 8,
                 spreadRadius: 1,
               ),
@@ -461,7 +562,7 @@ class OrderCard extends StatelessWidget {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3), // Reduced blur intensity
+              filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(

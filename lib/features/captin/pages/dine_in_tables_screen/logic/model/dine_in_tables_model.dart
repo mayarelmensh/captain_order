@@ -22,19 +22,58 @@ class LocationModel {
   }
 }
 
+class SubTableModel {
+  final int id;
+  final String tableNumber;
+  final int capacity;
+  final int mainTableId;
+  final String? qrCodeLink; // nullable
+
+  SubTableModel({
+    required this.id,
+    required this.tableNumber,
+    required this.capacity,
+    required this.mainTableId,
+    this.qrCodeLink,
+  });
+
+  factory SubTableModel.fromJson(Map<String, dynamic> json) {
+    return SubTableModel(
+      id: json['id'] as int,
+      tableNumber: json['table_number'] as String,
+      capacity: json['capacity'] as int,
+      mainTableId: json['main_table_id'] as int,
+      qrCodeLink: json['qr_code_link'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'table_number': tableNumber,
+      'capacity': capacity,
+      'main_table_id': mainTableId,
+      'qr_code_link': qrCodeLink,
+    };
+  }
+}
+
 class TableModel {
   final int id;
   final String tableNumber;
   final int locationId;
   final int? branchId;
   final int capacity;
-  final String? qrCode;  // nullable
+  final String? qrCode; // nullable
   final int status;
-  final String? createdAt;  // nullable
+  final String? createdAt; // nullable
   final String updatedAt;
   final String currentStatus;
   final int occupied;
-  final String? qrCodeLink;  // nullable
+  final int isMerge;
+  final int? mainTableId; // nullable
+  final String? qrCodeLink; // nullable
+  final List<SubTableModel> subTable;
 
   TableModel({
     required this.id,
@@ -48,7 +87,10 @@ class TableModel {
     required this.updatedAt,
     required this.currentStatus,
     required this.occupied,
+    required this.isMerge,
+    this.mainTableId,
     this.qrCodeLink,
+    required this.subTable,
   });
 
   factory TableModel.fromJson(Map<String, dynamic> json) {
@@ -58,13 +100,18 @@ class TableModel {
       locationId: json['location_id'] as int,
       branchId: json['branch_id'] as int?,
       capacity: json['capacity'] as int,
-      qrCode: json['qr_code'] as String?,  // safe for null
+      qrCode: json['qr_code'] as String?,
       status: json['status'] as int,
-      createdAt: json['created_at'] as String?,  // safe for null
+      createdAt: json['created_at'] as String?,
       updatedAt: json['updated_at'] as String,
       currentStatus: json['current_status'] as String,
       occupied: json['occupied'] as int,
+      isMerge: json['is_merge'] as int,
+      mainTableId: json['main_table_id'] as int?,
       qrCodeLink: json['qr_code_link'] as String?,
+      subTable: (json['sub_table'] as List<dynamic>)
+          .map((e) => SubTableModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 
@@ -81,7 +128,10 @@ class TableModel {
       'updated_at': updatedAt,
       'current_status': currentStatus,
       'occupied': occupied,
+      'is_merge': isMerge,
+      'main_table_id': mainTableId,
       'qr_code_link': qrCodeLink,
+      'sub_table': subTable.map((e) => e.toJson()).toList(),
     };
   }
 }
@@ -89,10 +139,10 @@ class TableModel {
 class CafeLocationModel {
   final int id;
   final String name;
-  final String? createdAt;  // nullable
+  final String? createdAt; // nullable
   final String updatedAt;
   final int branchId;
-  final List<LocationModel>? location;  // nullable list
+  final List<LocationModel>? location; // nullable list
   final List<TableModel> tables;
 
   CafeLocationModel({
@@ -109,7 +159,7 @@ class CafeLocationModel {
     return CafeLocationModel(
       id: json['id'] as int,
       name: json['name'] as String,
-      createdAt: json['created_at'] as String?,  // safe for null
+      createdAt: json['created_at'] as String?,
       updatedAt: json['updated_at'] as String,
       branchId: json['branch_id'] as int,
       location: json['location'] != null
@@ -175,10 +225,10 @@ class FinancialAccountModel {
 class PaymentMethodModel {
   final int id;
   final String name;
-  final String? description;  // nullable
+  final String? description; // nullable
   final String logo;
   final int status;
-  final String? createdAt;  // nullable
+  final String? createdAt; // nullable
   final String updatedAt;
   final String type;
   final int order;
@@ -201,10 +251,10 @@ class PaymentMethodModel {
     return PaymentMethodModel(
       id: json['id'] as int,
       name: json['name'] as String,
-      description: json['description'] as String?,  // safe for null
+      description: json['description'] as String?,
       logo: json['logo'] as String,
       status: json['status'] as int,
-      createdAt: json['created_at'] as String?,  // safe for null
+      createdAt: json['created_at'] as String?,
       updatedAt: json['updated_at'] as String,
       type: json['type'] as String,
       order: json['order'] as int,

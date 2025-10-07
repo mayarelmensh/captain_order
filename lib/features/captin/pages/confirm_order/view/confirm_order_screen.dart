@@ -125,8 +125,8 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
             allExtras: [],
           ),
         );
-        return product.imageLink.isNotEmpty && product.imageLink.startsWith('http')
-            ? product.imageLink
+        return product.imageLink!.isNotEmpty && product.imageLink!.startsWith('http')
+            ? product.imageLink!
             : 'assets/images/placeholder.png';
       }
     } catch (e) {
@@ -239,6 +239,7 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
             final option = variation.options.firstWhere(
                   (o) => o.id == optionId,
               orElse: () => VariationOption(
+                translations: [],
                 id: optionId,
                 name: 'Option $optionId',
                 price: 0.0,
@@ -284,7 +285,7 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
           if (product.allExtras != null) {
             final extra = product.allExtras!.firstWhere(
                   (e) => e.id == extraId,
-              orElse: () => Extra(id: extraId, name: 'Extra $extraId', price: 0.0, productId: 0),
+              orElse: () => Extra(id: extraId, name: 'Extra $extraId', price: 0.0,),
             );
             if (extra.id == extraId) return extra.name ?? 'Extra $extraId';
           }
@@ -700,7 +701,7 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
                                         Text(
-                                          "\$${item['amount']?.toStringAsFixed(2) ?? '0.00'}",
+                                          "${item['amount']?.toStringAsFixed(2)  ?? '0.00'} EGP",
                                           style: GoogleFonts.poppins(
                                             fontSize: 18.sp,
                                             fontWeight: FontWeight.w700,
@@ -840,7 +841,7 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
                               ),
                             ),
                             Text(
-                              "\$${subtotal.toStringAsFixed(2)}",
+                              "${subtotal.toStringAsFixed(2)} EGP",
                               style: GoogleFonts.poppins(
                                 fontSize: 14.sp,
                                 color: AppColors.black,
@@ -883,7 +884,7 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
                                 ),
                               ),
                               Text(
-                                "\$${totalTax.toStringAsFixed(2)}",
+                                "${totalTax.toStringAsFixed(2)} EGP",
                                 style: GoogleFonts.poppins(
                                   fontSize: 14.sp,
                                   color: AppColors.black,
@@ -906,7 +907,7 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
                                 ),
                               ),
                               Text(
-                                "-\$${totalDiscount.toStringAsFixed(2)}",
+                                "-${totalDiscount.toStringAsFixed(2)} EGP",
                                 style: GoogleFonts.poppins(
                                   fontSize: 14.sp,
                                   color: AppColors.green,
@@ -929,7 +930,7 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
                               ),
                             ),
                             Text(
-                              "\$${total.toStringAsFixed(2)}",
+                              "${total.toStringAsFixed(2)} EGP",
                               style: GoogleFonts.poppins(
                                 fontSize: 18.sp,
                                 fontWeight: FontWeight.w700,
