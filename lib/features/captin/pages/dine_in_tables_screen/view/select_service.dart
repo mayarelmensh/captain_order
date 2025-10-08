@@ -47,7 +47,7 @@ class _SelectServiceScreenState extends State<SelectServiceScreen> {
         },
         child: Scaffold(
           body: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 100.h),
+            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 60.h),
             child: SingleChildScrollView(
               child: Column(
                 children: [

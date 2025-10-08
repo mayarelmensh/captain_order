@@ -264,7 +264,7 @@ class _GetTableOrderScreenState extends State<GetTableOrderScreen> {
                               children: [
                                 Container(
                                   width: MediaQuery.of(context).size.width * 0.3,
-                                  padding: EdgeInsets.symmetric(horizontal: 12.w),
+                                  padding: EdgeInsets.symmetric(horizontal: 10.w),
                                   decoration: BoxDecoration(
                                     border: Border.all(color: AppColors.primary, width: 0.5),
                                     borderRadius: BorderRadius.circular(10.r),

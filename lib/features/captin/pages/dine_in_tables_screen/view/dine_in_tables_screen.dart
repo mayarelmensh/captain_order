@@ -1851,7 +1851,7 @@ class _DineInTablesScreenContentState
                   ),
                   SizedBox(height: 16.h),
                   Text(
-                    state.message,
+                    "Something went error ,please check internet connection and try again",
                     style: GoogleFonts.poppins(
                       color: AppColors.black,
                       fontSize: 16.sp,

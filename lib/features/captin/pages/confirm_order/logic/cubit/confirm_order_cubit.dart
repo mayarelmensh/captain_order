@@ -18,6 +18,7 @@ class ConfirmOrderCubit extends Cubit<ConfirmOrderState> {
     required List<Map<String, dynamic>> products,
   }) async {
     emit(ConfirmOrderLoading());
+
     try {
       await SharedPreferenceUtils.init();
       final token = SharedPreferenceUtils.getData(key: 'token') as String?;
@@ -32,14 +33,20 @@ class ConfirmOrderCubit extends Cubit<ConfirmOrderState> {
         return;
       }
 
-      // Prepare order data - تنظيف البيانات الفارغة
-      final orderData = {
-        'table_id': tableId,
-        'amount': amount,
-        'total_tax': totalTax,
-        'total_discount': totalDiscount,
-        'products': products.map((product) {
-          // إنشاء map للمنتج الأساسي
+      print("📦 Starting to send ${products.length} products individually");
+
+      // قائمة لتخزين الـ responses الناجحة
+      List<dynamic> allSuccessProducts = [];
+      int successCount = 0;
+      int failedCount = 0;
+
+      // إرسال كل product لوحده
+      for (int i = 0; i < products.length; i++) {
+        final product = products[i];
+        print("📤 Sending product ${i + 1}/${products.length}: ID ${product['product_id']}");
+
+        try {
+          // تنظيف بيانات الـ product
           final productMap = <String, dynamic>{
             'product_id': product['product_id']?.toInt() ?? 0,
             'count': product['count'] is String
@@ -47,12 +54,12 @@ class ConfirmOrderCubit extends Cubit<ConfirmOrderState> {
                 : (product['count'] as int? ?? 1),
           };
 
-          // إضافة الـ note فقط لو موجود ومش فاضي
+          // إضافة الـ note فقط لو موجود
           if (product['note'] != null && product['note'].toString().trim().isNotEmpty) {
             productMap['note'] = product['note'].toString().trim();
           }
 
-          // إضافة الـ addons فقط لو موجود ومش فاضي
+          // إضافة الـ addons فقط لو موجود
           if (product['addons'] != null && product['addons'] is List) {
             final addonsList = (product['addons'] as List)
                 .where((addon) => addon != null && addon['addon_id'] != null)
@@ -64,39 +71,36 @@ class ConfirmOrderCubit extends Cubit<ConfirmOrderState> {
             })
                 .toList();
 
-            // فقط إضافة addons لو فيه عناصر
             if (addonsList.isNotEmpty) {
               productMap['addons'] = addonsList;
             }
           }
 
-          // إضافة الـ exclude_id فقط لو موجود ومش فاضي
+          // إضافة الـ exclude_id فقط لو موجود
           if (product['exclude_id'] != null && product['exclude_id'] is List) {
             final excludeList = (product['exclude_id'] as List)
                 .where((id) => id != null)
                 .map((id) => id?.toInt() ?? 0)
                 .toList();
 
-            // فقط إضافة exclude_id لو فيه عناصر
             if (excludeList.isNotEmpty) {
               productMap['exclude_id'] = excludeList;
             }
           }
 
-          // إضافة الـ extra_id فقط لو موجود ومش فاضي
+          // إضافة الـ extra_id فقط لو موجود
           if (product['extra_id'] != null && product['extra_id'] is List) {
             final extraList = (product['extra_id'] as List)
                 .where((id) => id != null)
                 .map((id) => id?.toInt() ?? 0)
                 .toList();
 
-            // فقط إضافة extra_id لو فيه عناصر
             if (extraList.isNotEmpty) {
               productMap['extra_id'] = extraList;
             }
           }
 
-          // إضافة الـ variation فقط لو موجود ومش فاضي
+          // إضافة الـ variation فقط لو موجود
           if (product['variation'] != null && product['variation'] is List) {
             final variationList = (product['variation'] as List)
                 .where((variation) =>
@@ -104,8 +108,7 @@ class ConfirmOrderCubit extends Cubit<ConfirmOrderState> {
                 variation['variation_id'] != null &&
                 variation['option_id'] != null &&
                 variation['option_id'] is List &&
-                (variation['option_id'] as List).isNotEmpty
-            )
+                (variation['option_id'] as List).isNotEmpty)
                 .map((variation) => {
               'variation_id': variation['variation_id']?.toInt() ?? 0,
               'option_id': (variation['option_id'] as List)
@@ -115,55 +118,117 @@ class ConfirmOrderCubit extends Cubit<ConfirmOrderState> {
             })
                 .toList();
 
-            // فقط إضافة variation لو فيه عناصر
             if (variationList.isNotEmpty) {
               productMap['variation'] = variationList;
             }
           }
 
-          return productMap;
-        }).toList(),
-      };
+          // حساب الـ amount, tax, discount للـ product الحالي
+          final productAmount = product['amount']?.toDouble() ?? 0.0;
+          final productTax = product['item_tax']?.toDouble() ?? 0.0;
+          final productDiscount = product['item_discount']?.toDouble() ?? 0.0;
 
-      print("📦 Sending order to API (cleaned data): $orderData");
-      print("🔍 Token: ${token.substring(0, token.length > 20 ? 20 : token.length)}...");
+          // إنشاء الـ order data للـ product الحالي
+          final orderData = {
+            'table_id': tableId,
+            'amount': productAmount,
+            'total_tax': productTax,
+            'total_discount': productDiscount,
+            'products': [productMap], // product واحد بس في الـ array
+          };
 
-      final response = await DioHelper.postData(
-        url: '/captain/dine_in_order',
-        data: orderData,
-        token: token,
-      );
+          print("📤 Sending single product order:");
+          print("   Product ID: ${productMap['product_id']}");
+          print("   Count: ${productMap['count']}");
+          print("   Amount: $productAmount");
+          print("   Tax: $productTax");
+          print("   Discount: $productDiscount");
+          print("   Full data: $orderData");
 
-      print("📋 API Response: ${response.data}");
-      print("📋 Status Code: ${response.statusCode}");
+          // إرسال الـ request
+          final response = await DioHelper.postData(
+            url: '/captain/dine_in_order',
+            data: orderData,
+            token: token,
+          );
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final productResponse = ProductResponse.fromJson(response.data);
-        print("📦 Parsed ${productResponse.success.length} products from response");
+          print("📋 Response for product ${i + 1}: Status ${response.statusCode}");
 
-        // Debug: Log the parsed products
-        for (var product in productResponse.success) {
-          print("📋 Product: ${product.name}, ID: ${product.id}, Count: ${product.count}");
-          print("📋 Addons: ${product.addonsSelected.length}, Extras: ${product.extras.length}");
-          print("📋 Variations: ${product.variationSelected.length}, Excludes: ${product.excludes.length}");
+          if (response.statusCode == 200 || response.statusCode == 201) {
+            successCount++;
+            print("✅ Product ${i + 1} sent successfully");
+
+            // تخزين الـ response
+            if (response.data != null && response.data['success'] != null) {
+              if (response.data['success'] is List) {
+                allSuccessProducts.addAll(response.data['success']);
+              } else {
+                allSuccessProducts.add(response.data['success']);
+              }
+            }
+          } else {
+            failedCount++;
+            print("❌ Product ${i + 1} failed: Status ${response.statusCode}");
+          }
+
+          // تأخير بسيط بين الـ requests (100ms)
+          await Future.delayed(Duration(milliseconds: 100));
+
+        } catch (productError) {
+          failedCount++;
+          print("❌ Error sending product ${i + 1}: $productError");
         }
+      }
 
-        emit(ConfirmOrderSuccess('Order confirmed successfully!', productResponse));
+      print("📊 Summary: $successCount succeeded, $failedCount failed out of ${products.length} products");
+
+      // التحقق من النتيجة النهائية
+      if (successCount == products.length) {
+        // كل المنتجات اتبعتت بنجاح
+        final productResponse = ProductResponse(success: allSuccessProducts.map((p) {
+          if (p is Map<String, dynamic>) {
+            return ProductModel.fromJson(p);
+          }
+          return ProductModel.fromJson({});
+        }).toList());
+
+        emit(ConfirmOrderSuccess(
+          'All ${products.length} products confirmed successfully!',
+          productResponse,
+        ));
         ToastMessage.toastMessage(
-          'Order confirmed successfully!',
+          'All ${products.length} products confirmed successfully!',
           AppColors.green,
           AppColors.white,
         );
-      } else {
-        print("❌ Unexpected server response: Status ${response.statusCode}");
-        emit(ConfirmOrderError(
-            'Failed to confirm order: Unexpected server response'));
+      } else if (successCount > 0) {
+        // بعض المنتجات اتبعتت والبعض فشل
+        final productResponse = ProductResponse(success: allSuccessProducts.map((p) {
+          if (p is Map<String, dynamic>) {
+            return ProductModel.fromJson(p);
+          }
+          return ProductModel.fromJson({});
+        }).toList());
+
+        emit(ConfirmOrderSuccess(
+          '$successCount out of ${products.length} products confirmed',
+          productResponse,
+        ));
         ToastMessage.toastMessage(
-          'Failed to confirm order: Unexpected server response',
+          '$successCount products confirmed, $failedCount failed',
+          AppColors.yellow,
+          AppColors.white,
+        );
+      } else {
+        // كل المنتجات فشلت
+        emit(ConfirmOrderError('Failed to confirm any products'));
+        ToastMessage.toastMessage(
+          'Failed to confirm any products',
           AppColors.red,
           AppColors.white,
         );
       }
+
     } catch (e, stackTrace) {
       print("⚠️ Confirm Order Exception: $e");
       print("📍 Stack Trace: $stackTrace");
