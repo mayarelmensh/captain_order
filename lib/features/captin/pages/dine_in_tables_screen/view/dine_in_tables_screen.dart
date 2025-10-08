@@ -69,7 +69,7 @@ class _DineInTablesScreenState extends State<DineInTablesScreen>
   @override
   Widget build(BuildContext context) {
     return ScreenUtilInit(
-      designSize: const Size(375, 812),
+      designSize: const Size(385, 812),
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {
@@ -1989,10 +1989,10 @@ class _DineInTablesScreenContentState
                         padding: EdgeInsets.symmetric(vertical: 10.h),
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount:
-                          crossAxisCount > 0 ? crossAxisCount : 1,
+                          2,
                           crossAxisSpacing: 2.5.w,
-                          mainAxisSpacing: 8.h,
-                          childAspectRatio: 0.92,
+                          mainAxisSpacing: 9.h,
+                          childAspectRatio: 0.77,
                         ),
                         itemCount: filteredTables.length,
                         itemBuilder: (context, index) {
@@ -2169,7 +2169,7 @@ class _DineInTablesScreenContentState
                                               ),
                                           ],
                                         ),
-                                        SizedBox(height: 5.h),
+                                        SizedBox(height: 12.h),
                                         Row(
                                           children: [
                                             Image.asset(

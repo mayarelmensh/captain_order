@@ -32,30 +32,100 @@ class ConfirmOrderCubit extends Cubit<ConfirmOrderState> {
         return;
       }
 
-      // Prepare order data
+      // Prepare order data - تنظيف البيانات الفارغة
       final orderData = {
         'table_id': tableId,
         'amount': amount,
         'total_tax': totalTax,
         'total_discount': totalDiscount,
-        'products': products.map((product) => {
-          'product_id': product['product_id']?.toInt() ?? 0,
-          'count': product['count'] is String ? int.parse(product['count']) : (product['count'] as int? ?? 1),
-          'note': product['note']?.toString() ?? '',
-          'addons': (product['addons'] as List? ?? []).map((addon) => {
-            'addon_id': addon['addon_id']?.toInt() ?? 0,
-            'count': addon['count'] is String ? int.parse(addon['count']) : (addon['count'] as int? ?? 1),
-          }).toList(),
-          'exclude_id': (product['exclude_id'] as List? ?? []).map((id) => id?.toInt() ?? 0).toList(),
-          'extra_id': (product['extra_id'] as List? ?? []).map((id) => id?.toInt() ?? 0).toList(),
-          'variation': (product['variation'] as List? ?? []).map((variation) => {
-            'variation_id': variation['variation_id']?.toInt() ?? 0,
-            'option_id': (variation['option_id'] as List? ?? []).map((id) => id?.toInt() ?? 0).toList(),
-          }).toList(),
+        'products': products.map((product) {
+          // إنشاء map للمنتج الأساسي
+          final productMap = <String, dynamic>{
+            'product_id': product['product_id']?.toInt() ?? 0,
+            'count': product['count'] is String
+                ? int.parse(product['count'])
+                : (product['count'] as int? ?? 1),
+          };
+
+          // إضافة الـ note فقط لو موجود ومش فاضي
+          if (product['note'] != null && product['note'].toString().trim().isNotEmpty) {
+            productMap['note'] = product['note'].toString().trim();
+          }
+
+          // إضافة الـ addons فقط لو موجود ومش فاضي
+          if (product['addons'] != null && product['addons'] is List) {
+            final addonsList = (product['addons'] as List)
+                .where((addon) => addon != null && addon['addon_id'] != null)
+                .map((addon) => {
+              'addon_id': addon['addon_id']?.toInt() ?? 0,
+              'count': addon['count'] is String
+                  ? int.parse(addon['count'])
+                  : (addon['count'] as int? ?? 1),
+            })
+                .toList();
+
+            // فقط إضافة addons لو فيه عناصر
+            if (addonsList.isNotEmpty) {
+              productMap['addons'] = addonsList;
+            }
+          }
+
+          // إضافة الـ exclude_id فقط لو موجود ومش فاضي
+          if (product['exclude_id'] != null && product['exclude_id'] is List) {
+            final excludeList = (product['exclude_id'] as List)
+                .where((id) => id != null)
+                .map((id) => id?.toInt() ?? 0)
+                .toList();
+
+            // فقط إضافة exclude_id لو فيه عناصر
+            if (excludeList.isNotEmpty) {
+              productMap['exclude_id'] = excludeList;
+            }
+          }
+
+          // إضافة الـ extra_id فقط لو موجود ومش فاضي
+          if (product['extra_id'] != null && product['extra_id'] is List) {
+            final extraList = (product['extra_id'] as List)
+                .where((id) => id != null)
+                .map((id) => id?.toInt() ?? 0)
+                .toList();
+
+            // فقط إضافة extra_id لو فيه عناصر
+            if (extraList.isNotEmpty) {
+              productMap['extra_id'] = extraList;
+            }
+          }
+
+          // إضافة الـ variation فقط لو موجود ومش فاضي
+          if (product['variation'] != null && product['variation'] is List) {
+            final variationList = (product['variation'] as List)
+                .where((variation) =>
+            variation != null &&
+                variation['variation_id'] != null &&
+                variation['option_id'] != null &&
+                variation['option_id'] is List &&
+                (variation['option_id'] as List).isNotEmpty
+            )
+                .map((variation) => {
+              'variation_id': variation['variation_id']?.toInt() ?? 0,
+              'option_id': (variation['option_id'] as List)
+                  .where((id) => id != null)
+                  .map((id) => id?.toInt() ?? 0)
+                  .toList(),
+            })
+                .toList();
+
+            // فقط إضافة variation لو فيه عناصر
+            if (variationList.isNotEmpty) {
+              productMap['variation'] = variationList;
+            }
+          }
+
+          return productMap;
         }).toList(),
       };
 
-      print("📦 Sending order to API: $orderData");
+      print("📦 Sending order to API (cleaned data): $orderData");
       print("🔍 Token: ${token.substring(0, token.length > 20 ? 20 : token.length)}...");
 
       final response = await DioHelper.postData(

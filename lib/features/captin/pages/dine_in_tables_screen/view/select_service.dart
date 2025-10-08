@@ -67,13 +67,13 @@ class _SelectServiceScreenState extends State<SelectServiceScreen> {
                         "Choose The Service\n below",
                         style: GoogleFonts.poppins(
                           fontWeight: FontWeight.w700,
-                          fontSize: 28.sp,
+                          fontSize: 24.sp,
                           color: AppColors.black,
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 20.h),
+                  SizedBox(height: 15.h),
                   Text(
                     'Table: $tableNumber',
                     style: GoogleFonts.poppins(
@@ -89,7 +89,7 @@ class _SelectServiceScreenState extends State<SelectServiceScreen> {
                       color: AppColors.subColor,
                     ),
                   ),
-                  SizedBox(height: 20.h),
+                  SizedBox(height: 15.h),
                   GestureDetector(
                     onTap: () {
                       Navigator.pushNamed(
@@ -104,7 +104,7 @@ class _SelectServiceScreenState extends State<SelectServiceScreen> {
                     },
                     child: Image.asset('assets/images/take_order.png'),
                   ),
-                  SizedBox(height: 24.h),
+                  SizedBox(height: 15.h),
                   Text(
                     "Or",
                     style: GoogleFonts.poppins(
@@ -113,7 +113,7 @@ class _SelectServiceScreenState extends State<SelectServiceScreen> {
                       color: AppColors.black,
                     ),
                   ),
-                  SizedBox(height: 24.h),
+                  SizedBox(height: 15.h),
                  GestureDetector(
                    onTap: () {
                      Navigator.pushNamed(
@@ -134,7 +134,7 @@ class _SelectServiceScreenState extends State<SelectServiceScreen> {
                      ],
                    ),
                  ),
-                  SizedBox(height: 24.h),
+                  SizedBox(height: 15.h),
                   Text(
                     "Or",
                     style: GoogleFonts.poppins(
@@ -143,7 +143,7 @@ class _SelectServiceScreenState extends State<SelectServiceScreen> {
                       color: AppColors.black,
                     ),
                   ),
-                  SizedBox(height: 24.h),
+                  SizedBox(height: 15.h),
                   BlocBuilder<DineInTablesCubit, DineInTablesState>(
                     builder: (context, state) {
                       return GestureDetector(

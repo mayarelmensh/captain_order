@@ -26,7 +26,7 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
   double totalTax = 0.0;
   double totalDiscount = 0.0;
   int? tableId;
-  final double serviceChargePercentage = 0.15; // Fixed 15% service charge as per code
+  final double serviceChargePercentage = 0.15;
 
   @override
   void initState() {
@@ -38,9 +38,9 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
       if (args != null) {
         setState(() {
           tableId = args['table_id']?.toInt() ?? 0;
-          totalTax = 0.0; // Initialize to 0, will recalculate from items
-          totalDiscount = 0.0; // Initialize to 0, will recalculate from items
-          subtotal = 0.0; // Initialize to 0, will recalculate from items
+          totalTax = 0.0;
+          totalDiscount = 0.0;
+          subtotal = 0.0;
 
           if (args['products'] != null && args['products'] is List) {
             final productsList = List<Map<String, dynamic>>.from(args['products']);
@@ -63,7 +63,7 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
                 'exclude_id': product['exclude_id'] ?? [],
                 'extra_id': product['extra_id'] ?? [],
                 'variation': product['variation'] ?? [],
-                'original_product': Map<String, dynamic>.from(product), // Deep copy
+                'original_product': Map<String, dynamic>.from(product),
               };
 
               orderItems.add(newItem);
@@ -311,7 +311,6 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
         orderItems[index]['item_tax'] = unitTax * newCount;
         orderItems[index]['item_discount'] = unitDiscount * newCount;
 
-        // Update addons quantities if applicable
         if (orderItems[index]['addons'] != null && orderItems[index]['addons'] is List) {
           final addonsList = List<Map<String, dynamic>>.from(orderItems[index]['addons']);
           for (var addon in addonsList) {
@@ -325,7 +324,6 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
           orderItems[index]['addons'] = addonsList;
         }
 
-        // Update original product
         orderItems[index]['original_product']['count'] = newCount;
         orderItems[index]['original_product']['amount'] = unitPrice * newCount;
         orderItems[index]['original_product']['item_tax'] = unitTax * newCount;
@@ -341,7 +339,6 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
           orderItems[index]['item_tax'] = unitTax * newCount;
           orderItems[index]['item_discount'] = unitDiscount * newCount;
 
-          // Update addons quantities if applicable
           if (orderItems[index]['addons'] != null && orderItems[index]['addons'] is List) {
             final addonsList = List<Map<String, dynamic>>.from(orderItems[index]['addons']);
             for (var addon in addonsList) {
@@ -355,7 +352,6 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
             orderItems[index]['addons'] = addonsList;
           }
 
-          // Update original product
           orderItems[index]['original_product']['count'] = newCount;
           orderItems[index]['original_product']['amount'] = unitPrice * newCount;
           orderItems[index]['original_product']['item_tax'] = unitTax * newCount;
@@ -383,7 +379,7 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
       subtotal = orderItems.fold(0.0, (sum, item) => sum + (item['amount']?.toDouble() ?? 0.0));
       totalTax = orderItems.fold(0.0, (sum, item) => sum + (item['item_tax']?.toDouble() ?? 0.0));
       totalDiscount = orderItems.fold(0.0, (sum, item) => sum + (item['item_discount']?.toDouble() ?? 0.0));
-      serviceCharge = 0.0; // Service charge disabled as per original code
+      serviceCharge = 0.0;
       total = subtotal + totalTax - totalDiscount;
       print('💰 Subtotal: $subtotal, Service Charge: $serviceCharge, Tax: $totalTax, Discount: $totalDiscount, Total: $total');
     });
@@ -401,7 +397,6 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
           leading: IconButton(
             icon: Icon(Icons.arrow_back, color: AppColors.subColor),
             onPressed: () {
-              // Return updated data to TableInOrder
               Navigator.pop(context, {
                 'products': orderItems.map((item) => Map<String, dynamic>.from(item['original_product'])).toList(),
                 'table_id': tableId,
@@ -424,7 +419,6 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
             IconButton(
               icon: Icon(CupertinoIcons.delete, color: AppColors.subColor),
               onPressed: () {
-                // Show confirmation dialog
                 showDialog(
                   context: context,
                   builder: (BuildContext context) {
@@ -453,7 +447,7 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
                         ),
                         TextButton(
                           onPressed: () {
-                            Navigator.of(context).pop(); // Close dialog
+                            Navigator.of(context).pop();
                             setState(() {
                               orderItems.clear();
                               calculateTotals();
@@ -484,7 +478,6 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
         body: BlocConsumer<ConfirmOrderCubit, ConfirmOrderState>(
           listener: (context, state) {
             if (state is ConfirmOrderLoading) {
-              // Show loading dialog
               showDialog(
                 context: context,
                 barrierDismissible: false,
@@ -508,7 +501,6 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
                 },
               );
             } else if (state is ConfirmOrderSuccess) {
-              // Close loading dialog
               if (Navigator.canPop(context)) {
                 Navigator.of(context).pop();
               }
@@ -520,7 +512,6 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
               );
               Navigator.popUntil(context, (route) => route.isFirst);
             } else if (state is ConfirmOrderError) {
-              // Close loading dialog
               if (Navigator.canPop(context)) {
                 Navigator.of(context).pop();
               }
@@ -535,7 +526,6 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
           builder: (context, state) {
             return Column(
               children: [
-                // Order Items List
                 Expanded(
                   child: orderItems.isEmpty
                       ? Center(
@@ -585,7 +575,6 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Item Image
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(8.r),
                                 child: item['image'] != null && item['image'].toString().isNotEmpty
@@ -645,7 +634,6 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
                                 ),
                               ),
                               SizedBox(width: 12.w),
-                              // Item Details
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -701,7 +689,7 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
                                         Text(
-                                          "${item['amount']?.toStringAsFixed(2)  ?? '0.00'} EGP",
+                                          "${item['amount']?.toStringAsFixed(2) ?? '0.00'} EGP",
                                           style: GoogleFonts.poppins(
                                             fontSize: 18.sp,
                                             fontWeight: FontWeight.w700,
@@ -710,7 +698,6 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
                                         ),
                                         Row(
                                           children: [
-                                            // Decrease Button
                                             CircleAvatar(
                                               backgroundColor: Colors.grey.shade200,
                                               radius: 16.r,
@@ -733,7 +720,6 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
                                               ),
                                             ),
                                             SizedBox(width: 8.w),
-                                            // Increase Button
                                             CircleAvatar(
                                               backgroundColor: AppColors.primary,
                                               radius: 16.r,
@@ -747,7 +733,6 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
                                               ),
                                             ),
                                             SizedBox(width: 8.w),
-                                            // Delete Button
                                             CircleAvatar(
                                               backgroundColor: AppColors.red.withOpacity(0.2),
                                               radius: 16.r,
@@ -775,7 +760,6 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
                   ),
                 ),
 
-                // Add More Items Button
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 35.h),
                   child: GestureDetector(
@@ -818,7 +802,6 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
                   ),
                 ),
 
-                // Order Summary
                 if (orderItems.isNotEmpty) ...[
                   Container(
                     margin: EdgeInsets.all(16.w),
@@ -851,26 +834,6 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
                           ],
                         ),
                         SizedBox(height: 8.h),
-                        // Row(
-                        //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        //   children: [
-                        //     Text(
-                        //       "Service Charge (15%)",
-                        //       style: GoogleFonts.poppins(
-                        //         fontSize: 14.sp,
-                        //         color: AppColors.subColor,
-                        //       ),
-                        //     ),
-                        //     Text(
-                        //       "\$${serviceCharge.toStringAsFixed(2)}",
-                        //       style: GoogleFonts.poppins(
-                        //         fontSize: 14.sp,
-                        //         color: AppColors.black,
-                        //         fontWeight: FontWeight.w600,
-                        //       ),
-                        //     ),
-                        //   ],
-                        // ),
                         if (totalTax > 0) ...[
                           SizedBox(height: 8.h),
                           Row(
@@ -943,7 +906,6 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
                     ),
                   ),
 
-                  // Confirm Order Button
                   Container(
                     width: double.infinity,
                     margin: EdgeInsets.fromLTRB(16.w, 0, 16.w, 20.h),
@@ -959,18 +921,10 @@ class _ConfirmOrderScreenState extends State<ConfirmOrderScreen> {
                           );
                           return;
                         }
-                        // Log the data before sending
                         print("📦 Preparing to send order:");
                         print("📋 Table ID: $tableId");
                         print("📋 Amount: $total, Tax: $totalTax, Discount: $totalDiscount");
                         print("📋 Products: $orderItems");
-                        for (var item in orderItems) {
-                          print("📋 Product ID: ${item['product_id']}, Count: ${item['count']}");
-                          print("📋 Addons: ${item['addons']}");
-                          print("📋 Excludes: ${item['exclude_id']}");
-                          print("📋 Extras: ${item['extra_id']}");
-                          print("📋 Variations: ${item['variation']}");
-                        }
 
                         context.read<ConfirmOrderCubit>().confirmOrder(
                           tableId: tableId ?? 0,

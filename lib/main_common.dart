@@ -1,3 +1,4 @@
+import 'package:device_preview/device_preview.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -20,13 +21,14 @@ import 'features/captin/pages/splash_screen/splash_screen.dart';
 import 'features/captin/pages/table_in_order/view/table_in_order.dart';
 import 'features/waiter/pages/home_screen/logic/cubit/order_cubit.dart';
 import 'features/auth/login/view/role_screen.dart';
+
 Future<void> mainCommon(AppConfig config) async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   await SharedPreferenceUtils.init();
   DioHelper.init();
 
-  // ✅ اعمل instance واحد فقط
+  // Create a single instance of LoginCubit
   final loginCubit = LoginCubit();
   await loginCubit.loadSavedData();
 
@@ -47,23 +49,28 @@ Future<void> mainCommon(AppConfig config) async {
     }
   }
 
-  runApp(MyApp(
-    config: config,
-    initialRoute: initialRoute,
-    loginCubit: loginCubit, // ✅ ابعت الـ instance
-  ));
+  runApp(
+    DevicePreview(
+      enabled: !const bool.fromEnvironment('dart.vm.product'), // Disable in release mode
+      builder: (context) => MyApp(
+        config: config,
+        initialRoute: initialRoute,
+        loginCubit: loginCubit,
+      ),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
   final AppConfig config;
   final String initialRoute;
-  final LoginCubit loginCubit; // ✅ ضيف الـ parameter
+  final LoginCubit loginCubit;
 
   const MyApp({
     super.key,
     required this.config,
     required this.initialRoute,
-    required this.loginCubit, // ✅ ضيف هنا
+    required this.loginCubit,
   });
 
   @override
@@ -72,15 +79,17 @@ class MyApp extends StatelessWidget {
       designSize: const Size(375, 812),
       minTextAdapt: true,
       splitScreenMode: true,
-      child: MultiBlocProvider(
+      builder: (context, child) => MultiBlocProvider(
         providers: [
-          // ✅ استخدم الـ BlocProvider.value بدل create
           BlocProvider.value(value: loginCubit),
           BlocProvider(create: (context) => OrderCubit()),
           BlocProvider(create: (context) => DineInTablesCubit()),
           BlocProvider(create: (context) => ProductListCubit()..getProductLists()),
         ],
         child: MaterialApp(
+          // Enable DevicePreview locale and accessibility
+          locale: DevicePreview.locale(context),
+          builder: DevicePreview.appBuilder,
           theme: ThemeData(
             scaffoldBackgroundColor: AppColors.backGround,
           ),

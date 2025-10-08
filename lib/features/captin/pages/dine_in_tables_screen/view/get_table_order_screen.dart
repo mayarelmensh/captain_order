@@ -286,7 +286,7 @@ class _GetTableOrderScreenState extends State<GetTableOrderScreen> {
                                           child: Text(
                                             value,
                                             style: GoogleFonts.poppins(
-                                              fontSize: 12.sp,
+                                              fontSize: 11.sp,
                                               fontWeight: FontWeight.w600,
                                               color: AppColors.primary,
                                             ),
@@ -300,7 +300,7 @@ class _GetTableOrderScreenState extends State<GetTableOrderScreen> {
                                           });
                                         }
                                       },
-                                      icon: Icon(Icons.arrow_drop_down, color: AppColors.primary, size: 20.sp),
+                                      icon: Icon(Icons.arrow_drop_down, color: AppColors.primary, size: 16.sp),
                                       isExpanded: true,
                                     ),
                                   ),

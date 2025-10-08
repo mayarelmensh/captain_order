@@ -689,7 +689,7 @@ class _TableInOrderState extends State<TableInOrder> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  'Error: ${state.message}',
+                                  'Error:something went wrong,please try again',
                                   style: GoogleFonts.poppins(
                                     color: AppColors.primary,
                                     fontSize: 14.sp,
@@ -1791,113 +1791,100 @@ class _TableInOrderState extends State<TableInOrder> {
                                   }
                                 }
 
+                                // في نهاية ملف table_in_order.dart
+// استبدل الجزء ده في دالة _showProductDialog عند الضغط على "Add To Order"
+
                                 if (isValid) {
                                   final prices = calculateItemPrice();
+
+                                  // تجهيز البيانات الأساسية
                                   Map<String, dynamic> newProduct = {
                                     'product_id': product.id,
                                     'count': quantity,
-                                    'note': noteController.text.isNotEmpty
-                                        ? noteController.text
-                                        : null,
                                     'amount': prices['totalPrice'] ?? 0.0,
                                     'item_tax': prices['totalTax'] ?? 0.0,
-                                    'item_discount':
-                                        prices['totalDiscount'] ?? 0.0,
-                                    'image':
-                                        product.imageLink?.isNotEmpty == true &&
-                                            product.imageLink!.startsWith(
-                                              'http',
-                                            )
+                                    'item_discount': prices['totalDiscount'] ?? 0.0,
+                                    'image': product.imageLink?.isNotEmpty == true &&
+                                        product.imageLink!.startsWith('http')
                                         ? product.imageLink
                                         : 'assets/images/placeholder.png',
-                                    // إضافة رابط الصورة
-                                    'addons': product.addons
-                                        .asMap()
-                                        .entries
-                                        .where(
-                                          (entry) =>
-                                              (addonQuantities[entry.value.id ??
-                                                      0] ??
-                                                  0) >
-                                              0,
-                                        )
-                                        .map(
-                                          (entry) => {
-                                            'addon_id': entry.value.id,
-                                            'count':
-                                                addonQuantities[entry
-                                                        .value
-                                                        .id ??
-                                                    0],
-                                            'amount':
-                                                (entry.value.price ?? 0.0) *
-                                                (addonQuantities[entry
-                                                            .value
-                                                            .id ??
-                                                        0] ??
-                                                    0),
-                                            'item_tax':
-                                                (entry.value.taxVal ?? 0.0) *
-                                                (addonQuantities[entry
-                                                            .value
-                                                            .id ??
-                                                        0] ??
-                                                    0),
-                                            'item_discount':
-                                                (entry.value.discountVal ??
-                                                    0.0) *
-                                                (addonQuantities[entry
-                                                            .value
-                                                            .id ??
-                                                        0] ??
-                                                    0),
-                                          },
-                                        )
-                                        .toList(),
-                                    'exclude_id': selectedExcludes.toList(),
-                                    'extra_id': selectedExtras.toList(),
-                                    'variation': product.variations
-                                        .map(
-                                          (variation) => {
-                                            'variation_id': variation.id,
-                                            'option_id':
-                                                variation.type == 'single'
-                                                ? (selectedSingleVariations[variation
-                                                                      .id ??
-                                                                  0] !=
-                                                              null &&
-                                                          selectedSingleVariations[variation
-                                                                      .id ??
-                                                                  0]! >=
-                                                              0
-                                                      ? [
-                                                          variation
-                                                              .options[selectedSingleVariations[variation
-                                                                      .id ??
-                                                                  0]!]
-                                                              .id,
-                                                        ]
-                                                      : [])
-                                                : (selectedMultipleVariations[variation
-                                                                  .id ??
-                                                              0] ??
-                                                          [])
-                                                      .map(
-                                                        (index) => variation
-                                                            .options[index]
-                                                            .id,
-                                                      )
-                                                      .toList(),
-                                          },
-                                        )
-                                        .toList(),
                                   };
+
+                                  // إضافة الـ note فقط لو موجود ومش فاضي
+                                  if (noteController.text.trim().isNotEmpty) {
+                                    newProduct['note'] = noteController.text.trim();
+                                  }
+
+                                  // إضافة الـ addons فقط لو فيه addons متختارة
+                                  final selectedAddons = product.addons
+                                      .where((addon) => (addonQuantities[addon.id ?? 0] ?? 0) > 0)
+                                      .map((addon) => {
+                                    'addon_id': addon.id,
+                                    'count': addonQuantities[addon.id ?? 0],
+                                    'amount': (addon.price ?? 0.0) *
+                                        (addonQuantities[addon.id ?? 0] ?? 0),
+                                    'item_tax': (addon.taxVal ?? 0.0) *
+                                        (addonQuantities[addon.id ?? 0] ?? 0),
+                                    'item_discount': (addon.discountVal ?? 0.0) *
+                                        (addonQuantities[addon.id ?? 0] ?? 0),
+                                  })
+                                      .toList();
+
+                                  if (selectedAddons.isNotEmpty) {
+                                    newProduct['addons'] = selectedAddons;
+                                  }
+
+                                  // إضافة الـ exclude_id فقط لو فيه excludes متختارة
+                                  if (selectedExcludes.isNotEmpty) {
+                                    newProduct['exclude_id'] = selectedExcludes.toList();
+                                  }
+
+                                  // إضافة الـ extra_id فقط لو فيه extras متختارة
+                                  if (selectedExtras.isNotEmpty) {
+                                    newProduct['extra_id'] = selectedExtras.toList();
+                                  }
+
+                                  // إضافة الـ variation فقط لو فيه variations متختارة
+                                  final selectedVariations = product.variations
+                                      .map((variation) {
+                                    List<dynamic> optionIds = [];
+
+                                    if (variation.type == 'single') {
+                                      // Single variation - check if selected
+                                      if (selectedSingleVariations[variation.id ?? 0] != null &&
+                                          selectedSingleVariations[variation.id ?? 0]! >= 0) {
+                                        optionIds = [
+                                          variation.options[selectedSingleVariations[variation.id ?? 0]!].id
+                                        ];
+                                      }
+                                    } else if (variation.type == 'multiple') {
+                                      // Multiple variation - get all selected options
+                                      final selectedIndices = selectedMultipleVariations[variation.id ?? 0] ?? [];
+                                      optionIds = selectedIndices
+                                          .map((index) => variation.options[index].id)
+                                          .toList();
+                                    }
+
+                                    // بس نرجع الـ variation لو فيه options متختارة
+                                    if (optionIds.isNotEmpty) {
+                                      return {
+                                        'variation_id': variation.id,
+                                        'option_id': optionIds,
+                                      };
+                                    }
+                                    return null;
+                                  })
+                                      .where((v) => v != null) // إزالة الـ null values
+                                      .toList();
+
+                                  if (selectedVariations.isNotEmpty) {
+                                    newProduct['variation'] = selectedVariations;
+                                  }
 
                                   setState(() {
                                     cartItems.add(newProduct);
                                     totalTax += prices['totalTax'] ?? 0.0;
-                                    totalDiscount +=
-                                        prices['totalDiscount'] ?? 0.0;
+                                    totalDiscount += prices['totalDiscount'] ?? 0.0;
                                     calculateTotal();
                                   });
 
@@ -1909,9 +1896,16 @@ class _TableInOrderState extends State<TableInOrder> {
                                     AppColors.white,
                                   );
 
-                                  print(
-                                    "📦 Product added to cart: ${newProduct['product_id']}, Amount: ${newProduct['amount']}, Tax: ${newProduct['item_tax']}, Discount: ${newProduct['item_discount']}",
-                                  );
+                                  print("📦 Product added to cart (cleaned data):");
+                                  print("   Product ID: ${newProduct['product_id']}");
+                                  print("   Count: ${newProduct['count']}");
+                                  print("   Amount: ${newProduct['amount']}");
+                                  print("   Has addons: ${newProduct.containsKey('addons')}");
+                                  print("   Has excludes: ${newProduct.containsKey('exclude_id')}");
+                                  print("   Has extras: ${newProduct.containsKey('extra_id')}");
+                                  print("   Has variations: ${newProduct.containsKey('variation')}");
+                                  print("   Has note: ${newProduct.containsKey('note')}");
+                                  print("   Full data: $newProduct");
                                 }
                               },
                               backgroundColor: AppColors.primary,
