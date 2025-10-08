@@ -1104,7 +1104,7 @@ class _DineInTablesScreenContentState
                           style: ElevatedButton.styleFrom(
                             backgroundColor: selectedMergeTables.isEmpty
                                 ? AppColors.borderColor
-                                : AppColors.purple,
+                                : AppColors.primary,
                             padding: EdgeInsets.symmetric(
                               vertical: 16.h,
                               horizontal: 20.w,
@@ -1992,7 +1992,7 @@ class _DineInTablesScreenContentState
                           2,
                           crossAxisSpacing: 2.5.w,
                           mainAxisSpacing: 9.h,
-                          childAspectRatio: 0.77,
+                          childAspectRatio: 0.8,
                         ),
                         itemCount: filteredTables.length,
                         itemBuilder: (context, index) {
@@ -2076,7 +2076,7 @@ class _DineInTablesScreenContentState
                                         Text(
                                           table.tableNumber,
                                           style: GoogleFonts.poppins(
-                                            fontSize: 30.sp,
+                                            fontSize: 26.sp,
                                             fontWeight: FontWeight.bold,
                                             color: AppColors.black,
                                           ),
